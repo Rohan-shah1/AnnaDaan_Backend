@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const { verifyGoogleToken } = require('../utils/googleAuth');
+const NotificationService = require('../services/notificationService'); // Import notification service
 
 // Register user
 const register = async (req, res) => {
@@ -31,6 +32,9 @@ const register = async (req, res) => {
     });
 
     const token = generateToken(user._id);
+
+    // Send welcome notification to new user
+    await NotificationService.sendWelcomeNotification(user._id, user.name);
 
     res.status(201).json({
       success: true,
@@ -111,6 +115,9 @@ const completeProfile = async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     );
+
+    // Send profile completion notification
+    await NotificationService.notifyProfileCompleted(user._id);
 
     res.json({
       success: true,
@@ -260,6 +267,9 @@ const googleAuth = async (req, res) => {
         emailVerified: true,
         profileCompleted: false
       });
+
+      // Send welcome notification to new Google user
+      await NotificationService.sendWelcomeNotification(user._id, user.name);
     }
 
     user.lastLogin = new Date();

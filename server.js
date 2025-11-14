@@ -1,10 +1,12 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+
+// Import the external database connection
+const connectDB = require('./config/database');
 
 const app = express();
 
@@ -35,17 +37,6 @@ if (process.env.NODE_ENV === 'development') {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Database Connection
-const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
-    console.log('MongoDB Connected: ' + conn.connection.host);
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    process.exit(1);
-  }
-};
-
 // Basic Routes
 app.get('/', (req, res) => {
   res.json({
@@ -55,7 +46,9 @@ app.get('/', (req, res) => {
   });
 });
 
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+  // Get mongoose instance from the database connection
+  const mongoose = require('mongoose');
   res.json({
     status: 'OK',
     database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
@@ -67,11 +60,13 @@ app.get('/health', (req, res) => {
 const authRoutes = require('./routes/auth');
 const donationRoutes = require('./routes/donations');
 const reservationRoutes = require('./routes/reservations');
+const notificationRoutes = require('./routes/notifications');
 
 // Mount Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/donations', donationRoutes);
 app.use('/api/reservations', reservationRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
@@ -96,9 +91,11 @@ const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
   try {
+    // Use the external database connection
     await connectDB();
     
     app.listen(PORT, () => {
+      const mongoose = require('mongoose');
       console.log(`
 AnnaDaan Server Started!
 Port: ${PORT}

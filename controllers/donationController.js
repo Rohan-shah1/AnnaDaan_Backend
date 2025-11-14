@@ -1,6 +1,7 @@
 const Donation = require('../models/Donation');
 const Reservation = require('../models/Reservation');
 const { calculateDistance, calculateTravelTime, isValidCoordinate } = require('../utils/geolocation');
+const NotificationService = require('../services/notificationService'); // Import notification service
 
 /**
  * @desc    Create a new donation
@@ -61,6 +62,13 @@ exports.createDonation = async (req, res) => {
     });
 
     await donation.populate('donor', 'name organizationName phone city avatar');
+
+    // Send notification to nearby receivers about new donation
+    await NotificationService.notifyNewDonation(
+      donation._id,
+      donation.location.city,
+      donation.foodType
+    );
 
     res.status(201).json({
       success: true,

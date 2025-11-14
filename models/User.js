@@ -59,6 +59,21 @@ const userSchema = new mongoose.Schema({
   registrationNumber: String,
   serviceAreas: [String],
   
+  // FCM Tokens for push notifications (multiple devices)
+  fcmTokens: [{
+    type: String,
+    select: false // Don't include in queries by default for security
+  }],
+  
+  // Notification preferences
+  notificationPreferences: {
+    donationUpdates: { type: Boolean, default: true },
+    reservationUpdates: { type: Boolean, default: true },
+    newDonations: { type: Boolean, default: true },
+    reminders: { type: Boolean, default: true },
+    promotions: { type: Boolean, default: false }
+  },
+  
   // Google OAuth fields
   googleId: {
     type: String,

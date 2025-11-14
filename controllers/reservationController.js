@@ -2,6 +2,7 @@ const Reservation = require('../models/Reservation');
 const Donation = require('../models/Donation');
 const User = require('../models/User');
 const { calculateDistance, calculateTravelTime } = require('../utils/geolocation');
+const NotificationService = require('../services/notificationService'); // Import notification service
 
 /**
  * @desc    Create a reservation
@@ -91,10 +92,23 @@ exports.createReservation = async (req, res) => {
     donation.reservedAt = new Date();
     await donation.save();
 
-    // Populate reservation data
+    // Populate reservation data for notifications
     await reservation.populate('donation', 'foodType foodDescription quantity location pickupWindow donor');
     await reservation.populate('receiver', 'name organizationName phone city');
     await reservation.populate('donor', 'name organizationName phone city');
+
+    // Send notifications to donor and receiver
+    await NotificationService.notifyDonationReserved(
+      donationId,
+      donation.donor.toString(),
+      req.user.organizationName
+    );
+
+    await NotificationService.notifyReservationConfirmed(
+      reservation._id,
+      receiverId,
+      donation.donor.organizationName
+    );
 
     res.status(201).json({
       success: true,
@@ -256,6 +270,13 @@ exports.updateReservationStatus = async (req, res) => {
       await User.findByIdAndUpdate(userId, {
         $inc: { totalPickups: 1 }
       });
+
+      // Send notification to donor that donation was picked up
+      await NotificationService.notifyDonationPickedUp(
+        reservation.donation._id,
+        reservation.donation.donor.toString(),
+        reservation.receiver.organizationName
+      );
     }
 
     // Update reservation
