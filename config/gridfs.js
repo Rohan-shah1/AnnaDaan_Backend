@@ -15,7 +15,13 @@ const storage = new GridFsStorage({
         const filename = buf.toString('hex') + path.extname(file.originalname);
         const fileInfo = {
           filename: filename,
-          bucketName: 'uploads' // Collection name: uploads.files, uploads.chunks
+          bucketName: 'uploads', // Collection name: uploads.files, uploads.chunks
+          metadata: {
+            originalName: file.originalname,
+            uploadedBy: req.user ? req.user._id : null,
+            uploadDate: new Date()
+          },
+          contentType: file.mimetype
         };
         resolve(fileInfo);
       });
@@ -23,6 +29,27 @@ const storage = new GridFsStorage({
   }
 });
 
-const upload = multer({ storage });
+// Add error handling
+storage.on('connection', (db) => {
+  console.log('GridFS storage connected');
+});
+
+storage.on('connectionFailed', (err) => {
+  console.error('GridFS connection failed:', err);
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept images only
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed!'), false);
+    }
+    cb(null, true);
+  }
+});
 
 module.exports = upload;
