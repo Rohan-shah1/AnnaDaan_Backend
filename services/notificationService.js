@@ -1,5 +1,6 @@
 const { sendPushNotification, sendBulkNotifications, notificationTemplates } = require('../utils/notifications');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 
 // Service class to handle business logic for notifications
 class NotificationService {
@@ -16,6 +17,15 @@ class NotificationService {
           screen: 'donation_details'
         }
       );
+
+      // Save to database
+      await Notification.create({
+        recipient: donorId,
+        title: notificationTemplates.DONATION_RESERVED.title,
+        message: notificationTemplates.DONATION_RESERVED.body.replace('{{receiverName}}', receiverName),
+        type: 'reservation',
+        relatedId: donationId
+      });
 
       console.log(`Donation reserved notification sent to donor: ${donorId}`);
       return result;
@@ -40,6 +50,15 @@ class NotificationService {
         }
       );
 
+      // Save to database
+      await Notification.create({
+        recipient: receiverId,
+        title: notificationTemplates.RESERVATION_CONFIRMED.title,
+        message: notificationTemplates.RESERVATION_CONFIRMED.body.replace('{{donorName}}', donorName),
+        type: 'reservation',
+        relatedId: reservationId
+      });
+
       console.log(`Reservation confirmed notification sent to receiver: ${receiverId}`);
       return result;
 
@@ -63,6 +82,15 @@ class NotificationService {
         }
       );
 
+      // Save to database
+      await Notification.create({
+        recipient: donorId,
+        title: notificationTemplates.DONATION_PICKED_UP.title,
+        message: notificationTemplates.DONATION_PICKED_UP.body.replace('{{receiverName}}', receiverName),
+        type: 'completion',
+        relatedId: donationId
+      });
+
       console.log(`Donation picked up notification sent to donor: ${donorId}`);
       return result;
 
@@ -85,6 +113,14 @@ class NotificationService {
         }
       );
 
+      // Save to database
+      await Notification.create({
+        recipient: userId,
+        title: notificationTemplates.WELCOME.title,
+        message: notificationTemplates.WELCOME.body.replace('{{userName}}', userName),
+        type: 'system'
+      });
+
       console.log(`Welcome notification sent to user: ${userId}`);
       return result;
 
@@ -106,6 +142,14 @@ class NotificationService {
         }
       );
 
+      // Save to database
+      await Notification.create({
+        recipient: userId,
+        title: notificationTemplates.PROFILE_COMPLETED.title,
+        message: notificationTemplates.PROFILE_COMPLETED.body,
+        type: 'system'
+      });
+
       console.log(`Profile completion notification sent to user: ${userId}`);
       return result;
 
@@ -126,6 +170,14 @@ class NotificationService {
           screen: 'home'
         }
       );
+
+      // Save to database
+      await Notification.create({
+        recipient: userId,
+        title: notificationTemplates.PROFILE_APPROVED.title,
+        message: notificationTemplates.PROFILE_APPROVED.body,
+        type: 'system'
+      });
 
       console.log(`Profile approved notification sent to user: ${userId}`);
       return result;
@@ -174,6 +226,19 @@ class NotificationService {
         )
       );
 
+      // Save to database for each receiver
+      const notificationsToSave = receiverIds.map(receiverId => ({
+        recipient: receiverId,
+        title: notification.title,
+        message: notification.body,
+        type: 'alert',
+        relatedId: donationId
+      }));
+
+      if (notificationsToSave.length > 0) {
+        await Notification.insertMany(notificationsToSave);
+      }
+
       const totalSent = results.reduce((sum, result) => sum + (result.sentCount || 0), 0);
 
       console.log(`New donation notification sent to ${totalSent} receivers in ${city}`);
@@ -207,6 +272,15 @@ class NotificationService {
           screen: 'reservation_details'
         }
       );
+
+      // Save to database
+      await Notification.create({
+        recipient: receiverId,
+        title: notification.title,
+        message: notification.body,
+        type: 'reminder',
+        relatedId: reservationId
+      });
 
       console.log(`Pickup reminder sent to receiver: ${receiverId}`);
       return result;

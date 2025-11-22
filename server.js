@@ -67,6 +67,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/donations', donationRoutes);
 app.use('/api/reservations', reservationRoutes);
 app.use('/api/notifications', notificationRoutes);
+const uploadRoutes = require('./routes/upload');
+app.use('/api/upload', uploadRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
@@ -93,7 +95,7 @@ const startServer = async () => {
   try {
     // Use the external database connection
     await connectDB();
-    
+
     app.listen(PORT, () => {
       const mongoose = require('mongoose');
       console.log(`

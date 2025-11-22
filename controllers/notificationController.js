@@ -1,4 +1,6 @@
+
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 const { sendPushNotification, notificationTemplates } = require('../utils/notifications');
 
 // Register FCM token for push notifications
@@ -21,7 +23,7 @@ const registerFCMToken = async (req, res) => {
       { new: true }
     );
 
-    console.log(`FCM token registered for user: ${userId}`);
+    console.log(`FCM token registered for user: ${userId} `);
 
     res.json({
       success: true,
@@ -55,7 +57,7 @@ const removeFCMToken = async (req, res) => {
       { $pull: { fcmTokens: fcmToken } }
     );
 
-    console.log(`FCM token removed for user: ${userId}`);
+    console.log(`FCM token removed for user: ${userId} `);
 
     res.json({
       success: true,
@@ -142,9 +144,60 @@ const sendTestNotification = async (req, res) => {
   }
 };
 
+// Get user notifications
+const getNotifications = async (req, res) => {
+  try {
+    const notifications = await Notification.find({ recipient: req.user._id })
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    res.json({
+      success: true,
+      data: notifications
+    });
+  } catch (error) {
+    console.error('Get notifications error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching notifications'
+    });
+  }
+};
+
+// Mark notification as read
+const markNotificationRead = async (req, res) => {
+  try {
+    const notification = await Notification.findOneAndUpdate(
+      { _id: req.params.id, recipient: req.user._id },
+      { isRead: true },
+      { new: true }
+    );
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: 'Notification not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Notification marked as read'
+    });
+  } catch (error) {
+    console.error('Mark notification read error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating notification'
+    });
+  }
+};
+
 module.exports = {
   registerFCMToken,
   removeFCMToken,
   updateNotificationPreferences,
-  sendTestNotification
+  sendTestNotification,
+  getNotifications,
+  markNotificationRead
 };

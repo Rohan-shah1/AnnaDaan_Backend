@@ -3,7 +3,9 @@ const {
   registerFCMToken,
   removeFCMToken,
   updateNotificationPreferences,
-  sendTestNotification
+  sendTestNotification,
+  getNotifications,
+  markNotificationRead
 } = require('../controllers/notificationController');
 const { protect } = require('../middleware/auth');
 
@@ -23,5 +25,11 @@ router.put('/preferences', updateNotificationPreferences);
 
 // Send test notification
 router.post('/test', sendTestNotification);
+
+// Get user notifications
+router.get('/', getNotifications);
+
+// Mark notification as read
+router.patch('/:id/read', markNotificationRead);
 
 module.exports = router;

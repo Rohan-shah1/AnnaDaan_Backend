@@ -17,13 +17,13 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: function() {
+    required: function () {
       // Password is required only for email authentication, not Google
       return this.authMethod === 'email';
     },
     minlength: 6
   },
-  
+
   // Profile completion fields (Step 2)
   userType: {
     type: String,
@@ -34,19 +34,19 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  
+
   // Contact information
   phone: {
     type: String,
     trim: true
   },
-  
+
   // Location - Simple city for profile
   city: {
     type: String,
     trim: true
   },
-  
+
   // Donor-specific fields
   organizationName: String,
   organizationType: {
@@ -54,17 +54,17 @@ const userSchema = new mongoose.Schema({
     enum: ['restaurant', 'large_vegetable_market', 'party_palace', 'event_venue', 'catering', null],
     default: null
   },
-  
+
   // Receiver-specific fields (NGO)
   registrationNumber: String,
   serviceAreas: [String],
-  
+
   // FCM Tokens for push notifications (multiple devices)
   fcmTokens: [{
     type: String,
     select: false // Don't include in queries by default for security
   }],
-  
+
   // Notification preferences
   notificationPreferences: {
     donationUpdates: { type: Boolean, default: true },
@@ -73,7 +73,7 @@ const userSchema = new mongoose.Schema({
     reminders: { type: Boolean, default: true },
     promotions: { type: Boolean, default: false }
   },
-  
+
   // Google OAuth fields
   googleId: {
     type: String,
@@ -90,7 +90,7 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  
+
   // System fields
   isVerified: {
     type: Boolean,
@@ -100,18 +100,24 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  lastLogin: Date
+  lastLogin: Date,
+
+  // File Upload
+  fileId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'uploads.files' // Reference to GridFS file
+  }
 }, {
   timestamps: true
 });
 
 // Hash password before saving (only for email auth users)
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   // Only hash the password if it's modified (or new) and user is using email auth
   if (!this.isModified('password') || this.authMethod === 'google') {
     return next();
   }
-  
+
   try {
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
@@ -122,12 +128,12 @@ userSchema.pre('save', async function(next) {
 });
 
 // Compare password method (only for email auth users)
-userSchema.methods.comparePassword = async function(candidatePassword) {
+userSchema.methods.comparePassword = async function (candidatePassword) {
   // If user uses Google auth, they don't have a password to compare
   if (this.authMethod === 'google') {
     return false;
   }
-  
+
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
