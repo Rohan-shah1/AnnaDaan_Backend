@@ -35,3 +35,46 @@ exports.uploadFile = async (req, res) => {
         });
     }
 };
+
+// @desc    Get a file by ID
+// @route   GET /api/upload/:id
+// @access  Public
+exports.getFile = async (req, res) => {
+    try {
+        const { getGridFSBucket } = require('../config/gridfs');
+        const mongoose = require('mongoose');
+        const gridfsBucket = getGridFSBucket();
+
+        if (!gridfsBucket) {
+            return res.status(500).json({
+                success: false,
+                message: 'GridFS not initialized'
+            });
+        }
+
+        const _id = new mongoose.Types.ObjectId(req.params.id);
+        const files = await gridfsBucket.find({ _id }).toArray();
+
+        if (!files || files.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'File not found'
+            });
+        }
+
+        const file = files[0];
+        res.set('Content-Type', file.contentType);
+        res.set('Content-Disposition', `inline; filename="${file.filename}"`);
+
+        const downloadStream = gridfsBucket.openDownloadStream(_id);
+        downloadStream.pipe(res);
+
+    } catch (error) {
+        console.error('File retrieval error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error retrieving file',
+            error: error.message
+        });
+    }
+};

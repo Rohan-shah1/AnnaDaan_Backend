@@ -9,4 +9,10 @@ const { protect } = require('../middleware/auth'); // Assuming auth middleware e
 // @access  Private
 router.post('/', protect, upload.single('file'), uploadFile);
 
+// @route   GET /api/upload/:id
+// @desc    Get a file
+// @access  Public
+const { getFile } = require('../controllers/uploadController');
+router.get('/:id', getFile);
+
 module.exports = router;

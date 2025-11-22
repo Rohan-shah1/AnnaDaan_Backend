@@ -147,10 +147,11 @@ const completeProfile = async (req, res) => {
     });
   }
 };
+
 // Update existing profile
 const updateProfile = async (req, res) => {
   try {
-    const { name, phone, address, city, organizationType, organizationName } = req.body;
+    const { name, phone, address, city, organizationType, organizationName, profilePicture } = req.body;
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
@@ -160,9 +161,35 @@ const updateProfile = async (req, res) => {
     if (city) user.city = city;
     if (organizationName) user.organizationName = organizationName;
     if (organizationType) user.organizationType = organizationType;
+    if (profilePicture) user.profilePicture = profilePicture;
 
     await user.save();
-    res.json({ success: true, message: 'Profile updated', user });
+
+    res.json({
+      success: true,
+      message: 'Profile updated',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        userType: user.userType,
+        profileCompleted: user.profileCompleted,
+        authMethod: user.authMethod,
+        phone: user.phone,
+        city: user.city,
+        address: user.address,
+        avatar: user.avatar,
+        profilePicture: user.profilePicture,
+        organizationName: user.organizationName,
+        ...(user.userType === 'donor' && {
+          organizationType: user.organizationType
+        }),
+        ...(user.userType === 'receiver' && {
+          registrationNumber: user.registrationNumber,
+          serviceAreas: user.serviceAreas
+        })
+      }
+    });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -349,7 +376,9 @@ const getMe = async (req, res) => {
         authMethod: user.authMethod,
         phone: user.phone,
         city: user.city,
+        address: user.address,
         avatar: user.avatar,
+        profilePicture: user.profilePicture,
         organizationName: user.organizationName,
         ...(user.userType === 'donor' && {
           organizationType: user.organizationType
