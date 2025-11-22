@@ -12,26 +12,17 @@ exports.uploadFile = async (req, res) => {
             });
         }
 
-        // Update user with the file ID
-        // Assuming req.user.id is populated by auth middleware
-        const user = await User.findByIdAndUpdate(
-            req.user.id,
-            { fileId: req.file.id },
-            { new: true, runValidators: true }
-        );
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
+        // Return file info in the format frontend expects
         res.status(200).json({
             success: true,
             message: 'File uploaded successfully',
-            fileId: req.file.id,
-            filename: req.file.filename
+            file: {
+                _id: req.file.id,
+                filename: req.file.filename,
+                contentType: req.file.contentType,
+                size: req.file.size,
+                uploadDate: req.file.uploadDate
+            }
         });
     } catch (error) {
         console.error('Upload error:', error);
