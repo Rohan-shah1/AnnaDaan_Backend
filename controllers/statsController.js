@@ -9,7 +9,7 @@ const Reservation = require('../models/Reservation');
 exports.getDashboardStats = async (req, res) => {
     try {
         const userId = req.user._id;
-        const userRole = req.user.role;
+        const userRole = req.user.userType;
 
         let stats = {};
 
@@ -141,7 +141,7 @@ exports.getDashboardStats = async (req, res) => {
 exports.getImpactMetrics = async (req, res) => {
     try {
         const userId = req.user._id;
-        const userRole = req.user.role;
+        const userRole = req.user.userType;
 
         let impactMetrics = {};
 
@@ -226,7 +226,7 @@ exports.getImpactMetrics = async (req, res) => {
 exports.getUserRating = async (req, res) => {
     try {
         const userId = req.user._id;
-        const userRole = req.user.role;
+        const userRole = req.user.userType;
 
         // For now, return mock rating data
         // TODO: Implement actual rating system with reservation feedback
