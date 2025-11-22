@@ -41,6 +41,11 @@ const userSchema = new mongoose.Schema({
     trim: true
   },
 
+  address: {
+    type: String,
+    trim: true
+  },
+
   // Location - Simple city for profile
   city: {
     type: String,
@@ -85,7 +90,11 @@ const userSchema = new mongoose.Schema({
     enum: ['email', 'google'],
     default: 'email'
   },
-  avatar: String, // Store Google profile picture
+  avatar: String, // Store Google profile picture URL
+  profilePicture: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'uploads.files' // Reference to GridFS uploaded profile picture
+  },
   emailVerified: {
     type: Boolean,
     default: false
@@ -102,7 +111,7 @@ const userSchema = new mongoose.Schema({
   },
   lastLogin: Date,
 
-  // File Upload
+  // File Upload (legacy field, keeping for compatibility)
   fileId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'uploads.files' // Reference to GridFS file
