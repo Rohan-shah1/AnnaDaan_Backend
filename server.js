@@ -61,14 +61,16 @@ const authRoutes = require('./routes/auth');
 const donationRoutes = require('./routes/donations');
 const reservationRoutes = require('./routes/reservations');
 const notificationRoutes = require('./routes/notifications');
+const uploadRoutes = require('./routes/upload');
+const statsRoutes = require('./routes/stats');
 
 // Mount Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/donations', donationRoutes);
 app.use('/api/reservations', reservationRoutes);
 app.use('/api/notifications', notificationRoutes);
-const uploadRoutes = require('./routes/upload');
 app.use('/api/upload', uploadRoutes);
+app.use('/api/stats', statsRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
