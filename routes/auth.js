@@ -7,7 +7,8 @@ const {
   googleAuth,
   getMe,
   checkEmail,
-  getProfileStatus
+  getProfileStatus,
+  updateProfile
 } = require('../controllers/authController');
 
 const router = express.Router();
@@ -21,5 +22,5 @@ router.post('/check-email', checkEmail);
 router.put('/profile', protect, completeProfile);
 router.get('/me', protect, getMe);
 router.get('/profile/status', protect, getProfileStatus);
-
+router.patch('/profile', protect, updateProfile);
 module.exports = router;

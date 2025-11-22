@@ -147,6 +147,26 @@ const completeProfile = async (req, res) => {
     });
   }
 };
+// Update existing profile
+const updateProfile = async (req, res) => {
+  try {
+    const { name, phone, address, city, organizationType, organizationName } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    if (name) user.name = name;
+    if (phone) user.phone = phone;
+    if (address) user.address = address;
+    if (city) user.city = city;
+    if (organizationName) user.organizationName = organizationName;
+    if (organizationType) user.organizationType = organizationType;
+
+    await user.save();
+    res.json({ success: true, message: 'Profile updated', user });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
 
 // Login user
 const login = async (req, res) => {
@@ -161,7 +181,7 @@ const login = async (req, res) => {
     }
 
     const user = await User.findOne({ email });
-    
+
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -231,7 +251,7 @@ const googleAuth = async (req, res) => {
     }
 
     const verification = await verifyGoogleToken(idToken);
-    
+
     if (!verification.success) {
       return res.status(400).json({
         success: false,
@@ -242,7 +262,7 @@ const googleAuth = async (req, res) => {
     const { user: googleUser } = verification;
     const { googleId, email, name, picture } = googleUser;
 
-    let user = await User.findOne({ 
+    let user = await User.findOne({
       $or: [
         { googleId: googleId },
         { email: email.toLowerCase() }
@@ -317,7 +337,7 @@ const googleAuth = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    
+
     res.json({
       success: true,
       user: {
@@ -389,7 +409,7 @@ const checkEmail = async (req, res) => {
 const getProfileStatus = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    
+
     res.json({
       success: true,
       profileCompleted: user.profileCompleted,
@@ -410,5 +430,6 @@ module.exports = {
   googleAuth,
   getMe,
   checkEmail,
-  getProfileStatus
+  getProfileStatus,
+  updateProfile
 };

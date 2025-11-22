@@ -6,7 +6,7 @@ const donationSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  
+
   // Food details
   foodType: {
     type: String,
@@ -30,7 +30,7 @@ const donationSchema = new mongoose.Schema({
       default: 'kg'
     }
   },
-  
+
   // Exact location with coordinates (from Google Maps)
   location: {
     address: {
@@ -56,7 +56,7 @@ const donationSchema = new mongoose.Schema({
       required: [true, 'City is required']
     }
   },
-  
+
   // Pickup details
   pickupWindow: {
     start: {
@@ -68,14 +68,14 @@ const donationSchema = new mongoose.Schema({
       required: [true, 'Pickup end time is required']
     }
   },
-  
+
   // Status and tracking
   status: {
     type: String,
     enum: ['pending', 'reserved', 'picked_up', 'cancelled', 'expired'],
     default: 'pending'
   },
-  
+
   // Safety checklist
   safetyChecklist: {
     temperatureChecked: Boolean,
@@ -84,7 +84,7 @@ const donationSchema = new mongoose.Schema({
     vegNonVegSegregated: Boolean,
     timestamp: Date
   },
-  
+
   // Special modes
   isRecurring: {
     type: Boolean,
@@ -95,7 +95,7 @@ const donationSchema = new mongoose.Schema({
     eventName: String,
     totalGuests: Number
   },
-  
+
   // Reservation info
   reservedBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -103,7 +103,7 @@ const donationSchema = new mongoose.Schema({
   },
   reservedAt: Date,
   pickedUpAt: Date
-  
+
 }, {
   timestamps: true
 });
@@ -112,19 +112,19 @@ const donationSchema = new mongoose.Schema({
 donationSchema.index({ 'location.coordinates': '2dsphere' });
 
 // Method to calculate distance to a point
-donationSchema.methods.calculateDistance = function(lat, lng) {
+donationSchema.methods.calculateDistance = function (lat, lng) {
   const R = 6371; // Earth's radius in kilometers
   const dLat = (lat - this.location.coordinates.lat) * Math.PI / 180;
   const dLng = (lng - this.location.coordinates.lng) * Math.PI / 180;
-  
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(this.location.coordinates.lat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
-    Math.sin(dLng/2) * Math.sin(dLng/2);
-  
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c;
-  
+
   return Math.round(distance * 100) / 100;
 };
 
