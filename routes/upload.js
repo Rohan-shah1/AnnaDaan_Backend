@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const upload = require('../config/gridfs');
+const { upload } = require('../config/gridfs');
 const { uploadFile } = require('../controllers/uploadController');
 const { protect } = require('../middleware/auth'); // Assuming auth middleware exists
 

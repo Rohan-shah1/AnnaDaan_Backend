@@ -1,4 +1,4 @@
-const User = require('../models/User');
+const { uploadToGridFS } = require('../config/gridfs');
 
 // @desc    Upload a file and link it to the user
 // @route   POST /api/upload
@@ -12,17 +12,19 @@ exports.uploadFile = async (req, res) => {
             });
         }
 
+        // Upload buffer to GridFS
+        const fileInfo = await uploadToGridFS(
+            req.file.buffer,
+            req.file.originalname,
+            req.file.mimetype,
+            req.user ? req.user._id : null
+        );
+
         // Return file info in the format frontend expects
         res.status(200).json({
             success: true,
             message: 'File uploaded successfully',
-            file: {
-                _id: req.file.id,
-                filename: req.file.filename,
-                contentType: req.file.contentType,
-                size: req.file.size,
-                uploadDate: req.file.uploadDate
-            }
+            file: fileInfo
         });
     } catch (error) {
         console.error('Upload error:', error);

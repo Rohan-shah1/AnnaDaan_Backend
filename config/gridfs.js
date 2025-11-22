@@ -1,42 +1,22 @@
 const multer = require('multer');
-const { GridFsStorage } = require('multer-gridfs-storage');
+const mongoose = require('mongoose');
+const { GridFSBucket } = require('mongodb');
 const crypto = require('crypto');
 const path = require('path');
 
-// Create storage engine
-const storage = new GridFsStorage({
-  url: process.env.MONGODB_URI,
-  file: (req, file) => {
-    return new Promise((resolve, reject) => {
-      crypto.randomBytes(16, (err, buf) => {
-        if (err) {
-          return reject(err);
-        }
-        const filename = buf.toString('hex') + path.extname(file.originalname);
-        const fileInfo = {
-          filename: filename,
-          bucketName: 'uploads', // Collection name: uploads.files, uploads.chunks
-          metadata: {
-            originalName: file.originalname,
-            uploadedBy: req.user ? req.user._id : null,
-            uploadDate: new Date()
-          },
-          contentType: file.mimetype
-        };
-        resolve(fileInfo);
-      });
-    });
-  }
+// Initialize GridFS bucket
+let gridfsBucket;
+
+// Initialize GridFS connection
+mongoose.connection.once('open', () => {
+  gridfsBucket = new GridFSBucket(mongoose.connection.db, {
+    bucketName: 'uploads'
+  });
+  console.log('GridFS bucket initialized');
 });
 
-// Add error handling
-storage.on('connection', (db) => {
-  console.log('GridFS storage connected');
-});
-
-storage.on('connectionFailed', (err) => {
-  console.error('GridFS connection failed:', err);
-});
+// Use memory storage for multer (we'll handle GridFS manually in controller)
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -52,4 +32,36 @@ const upload = multer({
   }
 });
 
-module.exports = upload;
+// Helper function to upload to GridFS
+const uploadToGridFS = (buffer, originalname, mimetype, userId) => {
+  return new Promise((resolve, reject) => {
+    const filename = crypto.randomBytes(16).toString('hex') + path.extname(originalname);
+
+    const uploadStream = gridfsBucket.openUploadStream(filename, {
+      contentType: mimetype,
+      metadata: {
+        originalName: originalname,
+        uploadedBy: userId,
+        uploadDate: new Date()
+      }
+    });
+
+    uploadStream.on('error', (error) => {
+      reject(error);
+    });
+
+    uploadStream.on('finish', (file) => {
+      resolve({
+        _id: file._id,
+        filename: file.filename,
+        contentType: mimetype,
+        size: buffer.length,
+        uploadDate: new Date()
+      });
+    });
+
+    uploadStream.end(buffer);
+  });
+};
+
+module.exports = { upload, uploadToGridFS, getGridFSBucket: () => gridfsBucket };
