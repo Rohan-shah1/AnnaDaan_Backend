@@ -50,10 +50,11 @@ const uploadToGridFS = (buffer, originalname, mimetype, userId) => {
       reject(error);
     });
 
-    uploadStream.on('finish', (file) => {
+    uploadStream.on('finish', () => {
+      // Use uploadStream.id (not file._id - finish event doesn't pass file object)
       resolve({
-        _id: file._id,
-        filename: file.filename,
+        _id: uploadStream.id,
+        filename: filename,
         contentType: mimetype,
         size: buffer.length,
         uploadDate: new Date()
