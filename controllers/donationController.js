@@ -147,7 +147,7 @@ exports.getDonation = async (req, res) => {
     // Authorization check
     const isDonor = donation.donor._id.toString() === req.user._id.toString();
     const isReservedByUser = donation.reservedBy && donation.reservedBy._id.toString() === req.user._id.toString();
-    
+
     if (!isDonor && !isReservedByUser && req.user.userType !== 'admin') {
       return res.status(403).json({
         success: false,
@@ -200,7 +200,7 @@ exports.updateDonation = async (req, res) => {
     }
 
     const updates = req.body;
-    
+
     // Validate coordinates if provided
     if (updates.location && updates.location.coordinates) {
       if (!isValidCoordinate(updates.location.coordinates.lat, updates.location.coordinates.lng)) {
@@ -222,8 +222,8 @@ exports.updateDonation = async (req, res) => {
       updates,
       { new: true, runValidators: true }
     )
-    .populate('donor', 'name organizationName phone city avatar')
-    .populate('reservedBy', 'name organizationName phone avatar');
+      .populate('donor', 'name organizationName phone city avatar')
+      .populate('reservedBy', 'name organizationName phone avatar');
 
     res.json({
       success: true,
@@ -293,11 +293,11 @@ exports.deleteDonation = async (req, res) => {
  */
 exports.getNearbyDonations = async (req, res) => {
   try {
-    const { 
-      lat, 
-      lng, 
+    const {
+      lat,
+      lng,
       maxDistance = 20,
-      foodType, 
+      foodType,
       city,
       page = 1,
       limit = 10
@@ -317,7 +317,7 @@ exports.getNearbyDonations = async (req, res) => {
       });
     }
 
-    const query = { 
+    const query = {
       status: 'pending',
       'location.coordinates': {
         $near: {
@@ -343,12 +343,12 @@ exports.getNearbyDonations = async (req, res) => {
 
     const donationsWithDistance = donations.map(donation => {
       const distance = calculateDistance(
-        parseFloat(lat), 
-        parseFloat(lng), 
-        donation.location.coordinates.lat, 
+        parseFloat(lat),
+        parseFloat(lng),
+        donation.location.coordinates.lat,
         donation.location.coordinates.lng
       );
-      
+
       return {
         ...donation.toObject(),
         distance,
@@ -425,12 +425,12 @@ exports.searchDonations = async (req, res) => {
     if (lat && lng) {
       donationsWithDistance = donations.map(donation => {
         const distance = calculateDistance(
-          parseFloat(lat), 
-          parseFloat(lng), 
-          donation.location.coordinates.lat, 
+          parseFloat(lat),
+          parseFloat(lng),
+          donation.location.coordinates.lat,
           donation.location.coordinates.lng
         );
-        
+
         return {
           ...donation.toObject(),
           distance,
@@ -466,16 +466,16 @@ exports.getMyReservedDonations = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
 
-    const donations = await Donation.find({ 
+    const donations = await Donation.find({
       reservedBy: req.user._id,
       status: { $in: ['reserved', 'picked_up'] }
     })
-    .populate('donor', 'name organizationName phone city avatar')
-    .sort({ reservedAt: -1 })
-    .limit(limit * 1)
-    .skip((page - 1) * limit);
+      .populate('donor', 'name organizationName phone city avatar')
+      .sort({ reservedAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
 
-    const total = await Donation.countDocuments({ 
+    const total = await Donation.countDocuments({
       reservedBy: req.user._id,
       status: { $in: ['reserved', 'picked_up'] }
     });

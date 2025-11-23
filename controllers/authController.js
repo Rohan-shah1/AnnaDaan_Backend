@@ -46,7 +46,8 @@ const register = async (req, res) => {
         email: user.email,
         profileCompleted: user.profileCompleted,
         userType: user.userType,
-        authMethod: user.authMethod
+        authMethod: user.authMethod,
+        profilePicture: user.profilePicture
       }
     });
   } catch (error) {
@@ -130,6 +131,7 @@ const completeProfile = async (req, res) => {
         profileCompleted: user.profileCompleted,
         phone: user.phone,
         city: user.city,
+        profilePicture: user.profilePicture,
         organizationName: user.organizationName,
         ...(user.userType === 'donor' && {
           organizationType: user.organizationType
@@ -248,6 +250,7 @@ const login = async (req, res) => {
         userType: user.userType,
         profileCompleted: user.profileCompleted,
         authMethod: user.authMethod,
+        profilePicture: user.profilePicture,
         organizationName: user.organizationName,
         ...(user.userType === 'donor' && {
           organizationType: user.organizationType
@@ -336,6 +339,7 @@ const googleAuth = async (req, res) => {
         profileCompleted: user.profileCompleted,
         authMethod: user.authMethod,
         avatar: user.avatar,
+        profilePicture: user.profilePicture,
         ...(user.profileCompleted && {
           organizationName: user.organizationName,
           phone: user.phone,
