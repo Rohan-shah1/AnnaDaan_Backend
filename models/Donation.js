@@ -18,6 +18,10 @@ const donationSchema = new mongoose.Schema({
     required: [true, 'Food description is required'],
     trim: true
   },
+  foodImage: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'uploads.files'
+  },
   quantity: {
     value: {
       type: Number,
