@@ -3,6 +3,33 @@ const generateToken = require('../utils/generateToken');
 const { verifyGoogleToken } = require('../utils/googleAuth');
 const NotificationService = require('../services/notificationService'); // Import notification service
 
+// Helper function to format user response
+const formatUserResponse = (user) => {
+  return {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    userType: user.userType,
+    profileCompleted: user.profileCompleted,
+    authMethod: user.authMethod,
+    phone: user.phone,
+    city: user.city,
+    address: user.address,
+    avatar: user.avatar,
+    profilePicture: user.profilePicture,
+    verificationDocument: user.verificationDocument,
+    verificationStatus: user.verificationStatus,
+    organizationName: user.organizationName,
+    ...(user.userType === 'donor' && {
+      organizationType: user.organizationType
+    }),
+    ...(user.userType === 'receiver' && {
+      registrationNumber: user.registrationNumber,
+      serviceAreas: user.serviceAreas
+    })
+  };
+};
+
 // Register user
 const register = async (req, res) => {
   try {
@@ -40,15 +67,7 @@ const register = async (req, res) => {
       success: true,
       message: 'Registration successful. Please complete your profile.',
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        profileCompleted: user.profileCompleted,
-        userType: user.userType,
-        authMethod: user.authMethod,
-        profilePicture: user.profilePicture
-      }
+      user: formatUserResponse(user)
     });
   } catch (error) {
     res.status(400).json({
@@ -123,24 +142,7 @@ const completeProfile = async (req, res) => {
     res.json({
       success: true,
       message: 'Profile completed successfully',
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        userType: user.userType,
-        profileCompleted: user.profileCompleted,
-        phone: user.phone,
-        city: user.city,
-        profilePicture: user.profilePicture,
-        organizationName: user.organizationName,
-        ...(user.userType === 'donor' && {
-          organizationType: user.organizationType
-        }),
-        ...(user.userType === 'receiver' && {
-          registrationNumber: user.registrationNumber,
-          serviceAreas: user.serviceAreas
-        })
-      }
+      user: formatUserResponse(user)
     });
   } catch (error) {
     res.status(400).json({
@@ -153,7 +155,18 @@ const completeProfile = async (req, res) => {
 // Update existing profile
 const updateProfile = async (req, res) => {
   try {
-    const { name, phone, address, city, organizationType, organizationName, profilePicture } = req.body;
+    const {
+      name,
+      phone,
+      address,
+      city,
+      organizationType,
+      organizationName,
+      profilePicture,
+      verificationDocument,
+      verificationStatus
+    } = req.body;
+
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
@@ -164,33 +177,15 @@ const updateProfile = async (req, res) => {
     if (organizationName) user.organizationName = organizationName;
     if (organizationType) user.organizationType = organizationType;
     if (profilePicture) user.profilePicture = profilePicture;
+    if (verificationDocument) user.verificationDocument = verificationDocument;
+    if (verificationStatus) user.verificationStatus = verificationStatus;
 
     await user.save();
 
     res.json({
       success: true,
       message: 'Profile updated',
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        userType: user.userType,
-        profileCompleted: user.profileCompleted,
-        authMethod: user.authMethod,
-        phone: user.phone,
-        city: user.city,
-        address: user.address,
-        avatar: user.avatar,
-        profilePicture: user.profilePicture,
-        organizationName: user.organizationName,
-        ...(user.userType === 'donor' && {
-          organizationType: user.organizationType
-        }),
-        ...(user.userType === 'receiver' && {
-          registrationNumber: user.registrationNumber,
-          serviceAreas: user.serviceAreas
-        })
-      }
+      user: formatUserResponse(user)
     });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -243,22 +238,7 @@ const login = async (req, res) => {
       success: true,
       message: 'Login successful',
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        userType: user.userType,
-        profileCompleted: user.profileCompleted,
-        authMethod: user.authMethod,
-        profilePicture: user.profilePicture,
-        organizationName: user.organizationName,
-        ...(user.userType === 'donor' && {
-          organizationType: user.organizationType
-        }),
-        ...(user.userType === 'receiver' && {
-          registrationNumber: user.registrationNumber
-        })
-      }
+      user: formatUserResponse(user)
     });
   } catch (error) {
     res.status(500).json({
@@ -331,28 +311,7 @@ const googleAuth = async (req, res) => {
       success: true,
       message: 'Google authentication successful',
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        userType: user.userType,
-        profileCompleted: user.profileCompleted,
-        authMethod: user.authMethod,
-        avatar: user.avatar,
-        profilePicture: user.profilePicture,
-        ...(user.profileCompleted && {
-          organizationName: user.organizationName,
-          phone: user.phone,
-          city: user.city,
-          ...(user.userType === 'donor' && {
-            organizationType: user.organizationType
-          }),
-          ...(user.userType === 'receiver' && {
-            registrationNumber: user.registrationNumber,
-            serviceAreas: user.serviceAreas
-          })
-        })
-      }
+      user: formatUserResponse(user)
     });
 
   } catch (error) {
@@ -371,27 +330,7 @@ const getMe = async (req, res) => {
 
     res.json({
       success: true,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        userType: user.userType,
-        profileCompleted: user.profileCompleted,
-        authMethod: user.authMethod,
-        phone: user.phone,
-        city: user.city,
-        address: user.address,
-        avatar: user.avatar,
-        profilePicture: user.profilePicture,
-        organizationName: user.organizationName,
-        ...(user.userType === 'donor' && {
-          organizationType: user.organizationType
-        }),
-        ...(user.userType === 'receiver' && {
-          registrationNumber: user.registrationNumber,
-          serviceAreas: user.serviceAreas
-        })
-      }
+      user: formatUserResponse(user)
     });
   } catch (error) {
     res.status(500).json({
