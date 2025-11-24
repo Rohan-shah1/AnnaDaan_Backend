@@ -44,9 +44,37 @@ exports.getDashboardStats = async (req, res) => {
 
             const impact = impactResult.length > 0 ? impactResult[0] : { totalQuantity: 0, totalMeals: 0 };
 
-            // Calculate rating (based on completed reservations feedback if available)
-            // For now, return a placeholder rating
-            const rating = 4.8; // TODO: Implement actual rating calculation from reservation feedback
+            // Calculate rating (based on completed reservations feedback)
+            const ratingResult = await Reservation.aggregate([
+                {
+                    $lookup: {
+                        from: 'donations',
+                        localField: 'donation',
+                        foreignField: '_id',
+                        as: 'donationDetails'
+                    }
+                },
+                {
+                    $unwind: '$donationDetails'
+                },
+                {
+                    $match: {
+                        'donationDetails.donor': userId,
+                        'status': { $in: ['PICKED_UP', 'COMPLETED'] },
+                        'rating': { $exists: true, $ne: null }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        averageRating: { $avg: '$rating' }
+                    }
+                }
+            ]);
+
+            const rating = ratingResult.length > 0
+                ? parseFloat(ratingResult[0].averageRating.toFixed(1))
+                : 0.0;
 
             stats = {
                 role: 'donor',

@@ -20,7 +20,7 @@ const reservationSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
-  
+
   // Distance information
   distance: {
     type: Number, // in kilometers
@@ -30,22 +30,30 @@ const reservationSchema = new mongoose.Schema({
     type: Number, // in minutes
     required: true
   },
-  
+
   estimatedArrival: Date,
   actualPickup: Date,
-  
+
   assignedDriver: {
     name: String,
     phone: String,
     vehicle: String
   },
-  
+
   proofOfPickup: {
     photos: [String],
     receiverSignature: String,
     temperatureAtPickup: Number,
     notes: String
-  }
+  },
+
+  // Rating and Feedback
+  rating: {
+    type: Number,
+    min: 1,
+    max: 5
+  },
+  feedback: String
 }, {
   timestamps: true
 });
