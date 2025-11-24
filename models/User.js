@@ -1,3 +1,4 @@
+// User model with document verification fields
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -40,13 +41,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-
   address: {
     type: String,
     trim: true
   },
-
-  // Location - Simple city for profile
   city: {
     type: String,
     trim: true
@@ -100,33 +98,29 @@ const userSchema = new mongoose.Schema({
     default: false
   },
 
-  // System fields
-  isVerified: {
-    type: Boolean,
-    default: false
+  // Document verification fields
+  verificationDocument: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'uploads.files'
   },
-  isActive: {
-    type: Boolean,
-    default: true
+  verificationStatus: {
+    type: String,
+    enum: ['pending', 'verified', 'rejected', null],
+    default: null
   },
-  lastLogin: Date,
 
-  // File Upload (legacy field, keeping for compatibility)
+  // Legacy file upload field (kept for compatibility)
   fileId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'uploads.files' // Reference to GridFS file
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
 // Hash password before saving (only for email auth users)
 userSchema.pre('save', async function (next) {
-  // Only hash the password if it's modified (or new) and user is using email auth
   if (!this.isModified('password') || this.authMethod === 'google') {
     return next();
   }
-
   try {
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
@@ -138,11 +132,9 @@ userSchema.pre('save', async function (next) {
 
 // Compare password method (only for email auth users)
 userSchema.methods.comparePassword = async function (candidatePassword) {
-  // If user uses Google auth, they don't have a password to compare
   if (this.authMethod === 'google') {
     return false;
   }
-
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
