@@ -72,7 +72,7 @@ const donationSchema = new mongoose.Schema({
   // Status and tracking
   status: {
     type: String,
-    enum: ['pending', 'reserved', 'picked_up', 'cancelled', 'expired'],
+    enum: ['pending', 'reserved', 'picked_up', 'completed', 'cancelled', 'expired'],
     default: 'pending'
   },
 

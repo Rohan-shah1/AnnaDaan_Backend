@@ -13,7 +13,7 @@ const reservationSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['confirmed', 'picked_up', 'cancelled', 'no_show'],
+    enum: ['confirmed', 'picked_up', 'completed', 'cancelled', 'no_show'],
     default: 'confirmed'
   },
   scheduledPickup: {
