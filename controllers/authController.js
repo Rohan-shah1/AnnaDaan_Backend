@@ -179,8 +179,12 @@ const updateProfile = async (req, res) => {
     if (organizationName) user.organizationName = organizationName;
     if (organizationType) user.organizationType = organizationType;
     if (profilePicture) user.profilePicture = profilePicture;
-    if (verificationDocument) user.verificationDocument = verificationDocument;
-    if (verificationStatus) user.verificationStatus = verificationStatus;
+    if (req.body.hasOwnProperty('verificationDocument')) {
+      user.verificationDocument = verificationDocument;
+    }
+    if (req.body.hasOwnProperty('verificationStatus')) {
+      user.verificationStatus = verificationStatus;
+    }
 
     await user.save();
 
