@@ -47,7 +47,9 @@ const register = async (req, res) => {
         profileCompleted: user.profileCompleted,
         userType: user.userType,
         authMethod: user.authMethod,
-        profilePicture: user.profilePicture
+        profilePicture: user.profilePicture,
+        verificationDocument: user.verificationDocument,
+        verificationStatus: user.verificationStatus
       }
     });
   } catch (error) {
@@ -139,7 +141,9 @@ const completeProfile = async (req, res) => {
         ...(user.userType === 'receiver' && {
           registrationNumber: user.registrationNumber,
           serviceAreas: user.serviceAreas
-        })
+        }),
+        verificationDocument: user.verificationDocument,
+        verificationStatus: user.verificationStatus
       }
     });
   } catch (error) {
@@ -189,7 +193,9 @@ const updateProfile = async (req, res) => {
         ...(user.userType === 'receiver' && {
           registrationNumber: user.registrationNumber,
           serviceAreas: user.serviceAreas
-        })
+        }),
+        verificationDocument: user.verificationDocument,
+        verificationStatus: user.verificationStatus
       }
     });
   } catch (error) {
@@ -257,7 +263,9 @@ const login = async (req, res) => {
         }),
         ...(user.userType === 'receiver' && {
           registrationNumber: user.registrationNumber
-        })
+        }),
+        verificationDocument: user.verificationDocument,
+        verificationStatus: user.verificationStatus
       }
     });
   } catch (error) {
@@ -351,7 +359,9 @@ const googleAuth = async (req, res) => {
             registrationNumber: user.registrationNumber,
             serviceAreas: user.serviceAreas
           })
-        })
+        }),
+        verificationDocument: user.verificationDocument,
+        verificationStatus: user.verificationStatus
       }
     });
 
@@ -390,7 +400,9 @@ const getMe = async (req, res) => {
         ...(user.userType === 'receiver' && {
           registrationNumber: user.registrationNumber,
           serviceAreas: user.serviceAreas
-        })
+        }),
+        verificationDocument: user.verificationDocument,
+        verificationStatus: user.verificationStatus
       }
     });
   } catch (error) {
