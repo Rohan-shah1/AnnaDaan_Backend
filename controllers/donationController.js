@@ -369,7 +369,7 @@ exports.getNearbyDonations = async (req, res) => {
     console.error('Nearby donations error:', error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching nearby donations'
+      message: `Error fetching nearby donations: ${error.message}`
     });
   }
 };
