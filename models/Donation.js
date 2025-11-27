@@ -11,7 +11,7 @@ const donationSchema = new mongoose.Schema({
   foodType: {
     type: String,
     required: [true, 'Food type is required'],
-    enum: ['cooked_veg', 'cooked_non_veg', 'packaged_meals', 'raw_vegetables']
+    enum: ['cooked_meals_veg', 'cooked_meals_nonveg', 'fruits', 'vegetables', 'bakery', 'dairy']
   },
   foodDescription: {
     type: String,
