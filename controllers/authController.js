@@ -154,30 +154,37 @@ const completeProfile = async (req, res) => {
   }
 };
 
-// Update existing profile
+/// Update existing profile
 const updateProfile = async (req, res) => {
   try {
     const {
+      userType,
       name,
       phone,
       address,
       city,
       organizationType,
       organizationName,
+      registrationNumber,
+      serviceAreas,
       profilePicture,
       verificationDocument,
       verificationStatus
     } = req.body;
-
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-
     if (name) user.name = name;
     if (phone) user.phone = phone;
     if (address) user.address = address;
     if (city) user.city = city;
     if (organizationName) user.organizationName = organizationName;
     if (organizationType) user.organizationType = organizationType;
+    if (registrationNumber) user.registrationNumber = registrationNumber;
+    if (serviceAreas) user.serviceAreas = serviceAreas;
+    if (userType) {
+      user.userType = userType;
+      user.profileCompleted = true;
+    }
     if (profilePicture) user.profilePicture = profilePicture;
     if (req.body.hasOwnProperty('verificationDocument')) {
       user.verificationDocument = verificationDocument;
@@ -185,9 +192,7 @@ const updateProfile = async (req, res) => {
     if (req.body.hasOwnProperty('verificationStatus')) {
       user.verificationStatus = verificationStatus;
     }
-
     await user.save();
-
     res.json({
       success: true,
       message: 'Profile updated',
