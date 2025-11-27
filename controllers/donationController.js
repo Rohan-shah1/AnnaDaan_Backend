@@ -335,7 +335,6 @@ exports.getNearbyDonations = async (req, res) => {
 
     const donations = await Donation.find(query)
       .populate('donor', 'name organizationName phone city avatar rating')
-      .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
@@ -413,9 +412,15 @@ exports.searchDonations = async (req, res) => {
       };
     }
 
-    const donations = await Donation.find(query)
-      .populate('donor', 'name organizationName phone city avatar rating')
-      .sort({ createdAt: -1 })
+    let donationQuery = Donation.find(query)
+      .populate('donor', 'name organizationName phone city avatar rating');
+
+    // Only sort by createdAt if NOT searching by location (because $near sorts by distance)
+    if (!lat || !lng) {
+      donationQuery = donationQuery.sort({ createdAt: -1 });
+    }
+
+    const donations = await donationQuery
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
