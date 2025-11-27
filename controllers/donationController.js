@@ -317,15 +317,15 @@ exports.getNearbyDonations = async (req, res) => {
       });
     }
 
+    // Use $geoWithin instead of $near to allow sorting by other fields (like createdAt)
     const query = {
       status: 'pending',
       'location.coordinates': {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [parseFloat(lng), parseFloat(lat)]
-          },
-          $maxDistance: maxDistance * 1000
+        $geoWithin: {
+          $centerSphere: [
+            [parseFloat(lng), parseFloat(lat)],
+            maxDistance / 6378.1 // Convert km to radians (Earth radius ~6378.1km)
+          ]
         }
       }
     };
@@ -335,6 +335,7 @@ exports.getNearbyDonations = async (req, res) => {
 
     const donations = await Donation.find(query)
       .populate('donor', 'name organizationName phone city avatar rating')
+      .sort({ createdAt: -1 }) // Now we can sort by date!
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
@@ -401,13 +402,13 @@ exports.searchDonations = async (req, res) => {
     }
 
     if (lat && lng && isValidCoordinate(parseFloat(lat), parseFloat(lng))) {
+      // Use $geoWithin here too for consistency if we want to sort by date
       query['location.coordinates'] = {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [parseFloat(lng), parseFloat(lat)]
-          },
-          $maxDistance: maxDistance * 1000
+        $geoWithin: {
+          $centerSphere: [
+            [parseFloat(lng), parseFloat(lat)],
+            maxDistance / 6378.1
+          ]
         }
       };
     }
@@ -415,10 +416,8 @@ exports.searchDonations = async (req, res) => {
     let donationQuery = Donation.find(query)
       .populate('donor', 'name organizationName phone city avatar rating');
 
-    // Only sort by createdAt if NOT searching by location (because $near sorts by distance)
-    if (!lat || !lng) {
-      donationQuery = donationQuery.sort({ createdAt: -1 });
-    }
+    // Always sort by date (newest first) since we are using $geoWithin
+    donationQuery = donationQuery.sort({ createdAt: -1 });
 
     const donations = await donationQuery
       .limit(limit * 1)
