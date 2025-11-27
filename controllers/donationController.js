@@ -1,7 +1,7 @@
 const Donation = require('../models/Donation');
 const Reservation = require('../models/Reservation');
 const { calculateDistance, calculateTravelTime, isValidCoordinate } = require('../utils/geolocation');
-const NotificationService = require('../services/notificationService'); // Import notification service
+const NotificationService = require('../services/notificationService');
 
 /**
  * @desc    Create a new donation
@@ -317,60 +317,46 @@ exports.getNearbyDonations = async (req, res) => {
       });
     }
 
-    // Use $geoWithin instead of $near to allow sorting by other fields (like createdAt)
-    const query = {
-      status: 'pending',
-      'location.coordinates': {
-        $geoWithin: {
-          $centerSphere: [
-            [parseFloat(lng), parseFloat(lat)],
-            maxDistance / 6378.1 // Convert km to radians (Earth radius ~6378.1km)
-          ]
-        }
-      }
-    };
-
+    // Manual distance filtering because DB schema uses {lat, lng} object
+    const query = { status: 'pending' };
     if (foodType) query.foodType = foodType;
     if (city) query['location.city'] = new RegExp(city, 'i');
 
-    const donations = await Donation.find(query)
+    const allDonations = await Donation.find(query)
       .populate('donor', 'name organizationName phone city avatar rating')
-      .sort({ createdAt: -1 }) // Now we can sort by date!
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .sort({ createdAt: -1 });
 
-    const total = await Donation.countDocuments(query);
-
-    const donationsWithDistance = donations.map(donation => {
+    const donationsWithDistance = allDonations.map(donation => {
       const distance = calculateDistance(
         parseFloat(lat),
         parseFloat(lng),
         donation.location.coordinates.lat,
         donation.location.coordinates.lng
       );
-
       return {
         ...donation.toObject(),
         distance,
         estimatedTravelTime: calculateTravelTime(distance)
       };
-    });
+    }).filter(d => d.distance <= parseFloat(maxDistance));
+
+    // Pagination
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const paginatedDonations = donationsWithDistance.slice(startIndex, endIndex);
 
     res.json({
       success: true,
-      count: donationsWithDistance.length,
-      total,
+      count: paginatedDonations.length,
+      total: donationsWithDistance.length,
       page: parseInt(page),
-      pages: Math.ceil(total / limit),
-      donations: donationsWithDistance
+      pages: Math.ceil(donationsWithDistance.length / limit),
+      donations: paginatedDonations
     });
 
   } catch (error) {
     console.error('Nearby donations error:', error);
-    res.status(500).json({
-      success: false,
-      message: `Error fetching nearby donations: ${error.message}`
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -381,83 +367,61 @@ exports.getNearbyDonations = async (req, res) => {
  */
 exports.searchDonations = async (req, res) => {
   try {
-    const {
-      city,
-      foodType,
-      maxDistance = 20,
-      lat,
-      lng,
-      page = 1,
-      limit = 10
-    } = req.query;
-
+    const { city, foodType, lat, lng, page = 1, limit = 10 } = req.query;
     const query = { status: 'pending' };
+    if (city) query['location.city'] = new RegExp(city, 'i');
+    if (foodType) query.foodType = foodType;
 
-    if (city) {
-      query['location.city'] = new RegExp(city, 'i');
-    }
-
-    if (foodType) {
-      query.foodType = foodType;
-    }
-
-    if (lat && lng && isValidCoordinate(parseFloat(lat), parseFloat(lng))) {
-      // Use $geoWithin here too for consistency if we want to sort by date
-      query['location.coordinates'] = {
-        $geoWithin: {
-          $centerSphere: [
-            [parseFloat(lng), parseFloat(lat)],
-            maxDistance / 6378.1
-          ]
-        }
-      };
-    }
-
-    let donationQuery = Donation.find(query)
-      .populate('donor', 'name organizationName phone city avatar rating');
-
-    // Always sort by date (newest first) since we are using $geoWithin
-    donationQuery = donationQuery.sort({ createdAt: -1 });
-
-    const donations = await donationQuery
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
-    const total = await Donation.countDocuments(query);
-
-    let donationsWithDistance = donations;
+    // If location provided, we calculate distance but don't strictly filter
     if (lat && lng) {
-      donationsWithDistance = donations.map(donation => {
+      const allDonations = await Donation.find(query)
+        .populate('donor', 'name organizationName phone city avatar rating')
+        .sort({ createdAt: -1 });
+
+      const donationsWithDistance = allDonations.map(donation => {
         const distance = calculateDistance(
           parseFloat(lat),
           parseFloat(lng),
           donation.location.coordinates.lat,
           donation.location.coordinates.lng
         );
+        return { ...donation.toObject(), distance, estimatedTravelTime: calculateTravelTime(distance) };
+      });
 
-        return {
-          ...donation.toObject(),
-          distance,
-          estimatedTravelTime: calculateTravelTime(distance)
-        };
+      const startIndex = (page - 1) * limit;
+      const paginated = donationsWithDistance.slice(startIndex, startIndex + limit);
+
+      return res.json({
+        success: true,
+        count: paginated.length,
+        total: donationsWithDistance.length,
+        page: parseInt(page),
+        pages: Math.ceil(donationsWithDistance.length / limit),
+        donations: paginated
       });
     }
 
+    // Standard DB pagination if no location
+    const donations = await Donation.find(query)
+      .populate('donor', 'name organizationName phone city avatar rating')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Donation.countDocuments(query);
+
     res.json({
       success: true,
-      count: donationsWithDistance.length,
+      count: donations.length,
       total,
       page: parseInt(page),
       pages: Math.ceil(total / limit),
-      donations: donationsWithDistance
+      donations
     });
 
   } catch (error) {
-    console.error('Search donations error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error searching donations'
-    });
+    console.error('Search error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
