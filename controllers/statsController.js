@@ -76,6 +76,34 @@ exports.getDashboardStats = async (req, res) => {
                 ? parseFloat(ratingResult[0].averageRating.toFixed(1))
                 : 0.0;
 
+            // Calculate actual impact from quantities
+            const completedDonationsData = await Donation.find({
+                donor: userId,
+                status: { $in: ['completed', 'picked_up'] }
+            }).select('quantity');
+
+            let totalMeals = 0;
+            let totalPeople = 0;
+            let totalKg = 0;
+
+            completedDonationsData.forEach(don => {
+                const qty = don.quantity;
+                if (qty && qty.value) {
+                    const value = parseFloat(qty.value);
+                    const unit = (qty.unit || '').toLowerCase();
+
+                    if (unit === 'portions') {
+                        totalMeals += value;
+                        totalPeople += value;
+                        totalKg += value * 0.75; // 20 portions = 15kg, so 1 portion = 0.75kg
+                    } else if (unit === 'crates' || unit === 'boxes') {
+                        totalMeals += value * 26;
+                        totalPeople += value * 26;
+                        totalKg += value * 20;
+                    }
+                }
+            });
+
             stats = {
                 role: 'donor',
                 totalDonations,
@@ -83,8 +111,9 @@ exports.getDashboardStats = async (req, res) => {
                 completedDonations,
                 impact: {
                     totalDonations: completedDonations,
-                    estimatedMeals: Math.round(completedDonations * 50), // Estimate 50 meals per donation
-                    peopleHelped: Math.round(completedDonations * 25), // Estimate 25 people per donation
+                    estimatedMeals: Math.round(totalMeals),
+                    peopleHelped: Math.round(totalPeople),
+                    foodSaved: `${Math.round(totalKg)}kg`
                 },
                 rating: rating
             };
@@ -130,6 +159,34 @@ exports.getDashboardStats = async (req, res) => {
 
             const collected = foodCollected.length > 0 ? foodCollected[0].totalCount : 0;
 
+            // Calculate actual impact from quantities
+            const reservationsWithDonations = await Reservation.find({
+                receiver: userId,
+                status: { $in: ['picked_up', 'completed'] }
+            }).populate('donation', 'quantity');
+
+            let totalMeals = 0;
+            let totalPeople = 0;
+            let totalKg = 0;
+
+            reservationsWithDonations.forEach(res => {
+                const qty = res.donation?.quantity;
+                if (qty && qty.value) {
+                    const value = parseFloat(qty.value);
+                    const unit = (qty.unit || '').toLowerCase();
+
+                    if (unit === 'portions') {
+                        totalMeals += value;
+                        totalPeople += value;
+                        totalKg += value * 0.75;
+                    } else if (unit === 'crates' || unit === 'boxes') {
+                        totalMeals += value * 26;
+                        totalPeople += value * 26;
+                        totalKg += value * 20;
+                    }
+                }
+            });
+
             // Calculate rating
             const rating = 5.0; // TODO: Implement actual rating calculation
 
@@ -140,8 +197,9 @@ exports.getDashboardStats = async (req, res) => {
                 completedReservations,
                 impact: {
                     foodCollected: `${collected} pickups`,
-                    mealsServed: collected * 60, // Estimate 60 meals per pickup
-                    peopleHelped: collected * 30, // Estimate 30 people per pickup
+                    mealsServed: Math.round(totalMeals),
+                    peopleHelped: Math.round(totalPeople),
+                    foodCollectedKg: `${Math.round(totalKg)}kg`
                 },
                 rating: rating
             };
@@ -181,9 +239,29 @@ exports.getImpactMetrics = async (req, res) => {
             }).select('quantity createdAt foodType');
 
             const totalDonations = donations.length;
-            const estimatedMeals = totalDonations * 50; // 50 meals per donation average
-            const peopleHelped = Math.round(totalDonations * 25); // 25 people per donation
-            const foodSaved = `${totalDonations * 15}kg`; // 15kg per donation average
+
+            // Calculate actual impact from quantities
+            let totalMeals = 0;
+            let totalPeople = 0;
+            let totalKg = 0;
+
+            donations.forEach(don => {
+                const qty = don.quantity;
+                if (qty && qty.value) {
+                    const value = parseFloat(qty.value);
+                    const unit = (qty.unit || '').toLowerCase();
+
+                    if (unit === 'portions') {
+                        totalMeals += value;
+                        totalPeople += value;
+                        totalKg += value * 0.75;
+                    } else if (unit === 'crates' || unit === 'boxes') {
+                        totalMeals += value * 26;
+                        totalPeople += value * 26;
+                        totalKg += value * 20;
+                    }
+                }
+            });
 
             // Calculate monthly trend
             const thisMonth = new Date();
@@ -194,9 +272,9 @@ exports.getImpactMetrics = async (req, res) => {
 
             impactMetrics = {
                 totalDonations,
-                estimatedMeals,
-                peopleHelped,
-                foodSaved,
+                estimatedMeals: Math.round(totalMeals),
+                peopleHelped: Math.round(totalPeople),
+                foodSaved: `${Math.round(totalKg)}kg`,
                 thisMonth: thisMonthDonations,
                 trend: thisMonthDonations > 0 ? 'up' : 'stable'
             };
@@ -209,9 +287,29 @@ exports.getImpactMetrics = async (req, res) => {
             }).populate('donation', 'quantity foodType createdAt');
 
             const totalPickups = reservations.length;
-            const mealsServed = totalPickups * 60; // 60 meals per pickup average
-            const peopleHelped = totalPickups * 30; // 30 people per pickup
-            const foodCollected = `${totalPickups * 20}kg`; // 20kg per pickup average
+
+            // Calculate actual impact from quantities
+            let totalMeals = 0;
+            let totalPeople = 0;
+            let totalKg = 0;
+
+            reservations.forEach(res => {
+                const qty = res.donation?.quantity;
+                if (qty && qty.value) {
+                    const value = parseFloat(qty.value);
+                    const unit = (qty.unit || '').toLowerCase();
+
+                    if (unit === 'portions') {
+                        totalMeals += value;
+                        totalPeople += value;
+                        totalKg += value * 0.75;
+                    } else if (unit === 'crates' || unit === 'boxes') {
+                        totalMeals += value * 26;
+                        totalPeople += value * 26;
+                        totalKg += value * 20;
+                    }
+                }
+            });
 
             // Calculate monthly trend
             const thisMonth = new Date();
@@ -223,10 +321,10 @@ exports.getImpactMetrics = async (req, res) => {
             ).length;
 
             impactMetrics = {
-                totalPickups,
-                mealsServed,
-                peopleHelped,
-                foodCollected,
+                pickupsDone: totalPickups,
+                mealsServed: Math.round(totalMeals),
+                peopleHelped: Math.round(totalPeople),
+                foodCollected: `${Math.round(totalKg)}kg`,
                 thisMonth: thisMonthPickups,
                 trend: thisMonthPickups > 0 ? 'up' : 'stable'
             };
