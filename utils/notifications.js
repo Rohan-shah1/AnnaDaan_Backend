@@ -6,7 +6,7 @@ const sendPushNotification = async (userId, notification, data = {}) => {
   try {
     // Get user's FCM tokens and notification preferences
     const user = await User.findById(userId).select('fcmTokens notificationPreferences');
-    
+
     // Check if user has FCM tokens
     if (!user || !user.fcmTokens || user.fcmTokens.length === 0) {
       console.log(`No FCM tokens found for user: ${userId}`);
@@ -22,7 +22,7 @@ const sendPushNotification = async (userId, notification, data = {}) => {
         'reminder': 'reminders',
         'promotion': 'promotions'
       };
-      
+
       const preferenceKey = preferenceMapping[data.type];
       // Skip notification if user has disabled this type
       if (preferenceKey && !user.notificationPreferences[preferenceKey]) {
@@ -48,7 +48,7 @@ const sendPushNotification = async (userId, notification, data = {}) => {
 
     // Send multicast message to multiple devices
     const response = await admin.messaging().sendEachForMulticast(message);
-    
+
     console.log(`Notification sent to ${response.successCount} devices for user: ${userId}`);
 
     // Clean up invalid tokens if any failures occurred
@@ -96,7 +96,7 @@ const sendBulkNotifications = async (userIds, notification, data = {}) => {
 // Clean up invalid FCM tokens from user's device list
 const cleanupFailedTokens = async (userId, tokens, responses) => {
   const failedTokens = [];
-  
+
   // Identify failed tokens from Firebase responses
   responses.forEach((response, index) => {
     if (!response.success) {
@@ -135,7 +135,7 @@ const notificationTemplates = {
   // Donation-related notifications
   DONATION_RESERVED: {
     title: 'Donation Reserved!',
-    body: 'Your donation has been reserved by an NGO.',
+    body: 'Your donation has been reserved by {{receiverName}}. Please pack the food for pickup.',
     type: 'donation_update'
   },
   DONATION_PICKED_UP: {
