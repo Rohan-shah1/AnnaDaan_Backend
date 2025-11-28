@@ -143,14 +143,17 @@ exports.getMyReservations = async (req, res) => {
     if (userType === 'receiver') {
       query.receiver = userId;
       populateOptions = [
-        { path: 'donation', select: 'foodType foodDescription quantity location pickupWindow status donor' },
-        { path: 'donor', select: 'name organizationName phone city avatar' }
+        {
+          path: 'donation',
+          select: 'foodType foodDescription quantity location pickupWindow status donor',
+          populate: { path: 'donor', select: 'name organizationName phone city avatar' }
+        }
       ];
     } else if (userType === 'donor') {
       // Get reservations for donor's donations
       const donorDonations = await Donation.find({ donor: userId }).select('_id');
       const donationIds = donorDonations.map(donation => donation._id);
-      
+
       query.donation = { $in: donationIds };
       populateOptions = [
         { path: 'donation', select: 'foodType foodDescription quantity location pickupWindow status' },
@@ -260,7 +263,7 @@ exports.updateReservationStatus = async (req, res) => {
           message: 'Only receiver can mark reservation as picked up'
         });
       }
-      
+
       // Update donation status
       reservation.donation.status = 'picked_up';
       reservation.donation.pickedUpAt = new Date();
@@ -281,7 +284,7 @@ exports.updateReservationStatus = async (req, res) => {
 
     // Update reservation
     reservation.status = status;
-    
+
     if (status === 'picked_up') {
       reservation.actualPickup = new Date();
     }
