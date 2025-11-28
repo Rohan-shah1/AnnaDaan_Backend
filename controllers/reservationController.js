@@ -93,9 +93,12 @@ exports.createReservation = async (req, res) => {
     await donation.save();
 
     // Populate reservation data for notifications
-    await reservation.populate('donation', 'foodType foodDescription quantity location pickupWindow donor');
+    await reservation.populate({
+      path: 'donation',
+      select: 'foodType foodDescription quantity location pickupWindow donor',
+      populate: { path: 'donor', select: 'name organizationName phone city' }
+    });
     await reservation.populate('receiver', 'name organizationName phone city');
-    await reservation.populate('donor', 'name organizationName phone city');
 
     // Send notifications to donor and receiver
     await NotificationService.notifyDonationReserved(
