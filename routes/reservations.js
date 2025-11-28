@@ -4,7 +4,8 @@ const {
   getMyReservations,
   updateReservationStatus,
   updatePickupProof,
-  getReservationById
+  getReservationById,
+  submitRating
 } = require('../controllers/reservationController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -19,5 +20,6 @@ router.get('/my-reservations', getMyReservations);
 router.get('/:id', getReservationById);
 router.patch('/:id/status', updateReservationStatus);
 router.patch('/:id/pickup-proof', authorize('receiver'), updatePickupProof);
+router.patch('/:id/rating', authorize('receiver'), submitRating);
 
 module.exports = router;

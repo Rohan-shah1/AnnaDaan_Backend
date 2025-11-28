@@ -425,3 +425,80 @@ exports.getReservationById = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Submit rating for a reservation
+ * @route   PATCH /api/reservations/:id/rating
+ * @access  Private (Receiver only)
+ */
+exports.submitRating = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating, feedback } = req.body;
+    const userId = req.user._id;
+
+    // Validate rating
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rating must be between 1 and 5'
+      });
+    }
+
+    const reservation = await Reservation.findById(id)
+      .populate('donation', 'donor');
+
+    if (!reservation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Reservation not found'
+      });
+    }
+
+    // Authorization check - only receiver can rate
+    if (reservation.receiver.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the receiver can rate this reservation'
+      });
+    }
+
+    // Check if reservation is completed or picked up
+    if (!['picked_up', 'completed'].includes(reservation.status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Can only rate completed pickups'
+      });
+    }
+
+    // Check if already rated
+    if (reservation.rating) {
+      return res.status(400).json({
+        success: false,
+        message: 'This reservation has already been rated'
+      });
+    }
+
+    // Update reservation with rating
+    reservation.rating = rating;
+    reservation.feedback = feedback || '';
+    await reservation.save();
+
+    res.json({
+      success: true,
+      message: 'Rating submitted successfully',
+      reservation: {
+        _id: reservation._id,
+        rating: reservation.rating,
+        feedback: reservation.feedback
+      }
+    });
+
+  } catch (error) {
+    console.error('Submit rating error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error submitting rating'
+    });
+  }
+};
