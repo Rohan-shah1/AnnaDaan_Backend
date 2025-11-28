@@ -18,11 +18,11 @@ exports.getDashboardStats = async (req, res) => {
             const totalDonations = await Donation.countDocuments({ donor: userId });
             const activeDonations = await Donation.countDocuments({
                 donor: userId,
-                status: { $in: ['AVAILABLE', 'RESERVED'] }
+                status: { $in: ['pending', 'reserved'] }
             });
             const completedDonations = await Donation.countDocuments({
                 donor: userId,
-                status: 'COMPLETED'
+                status: { $in: ['completed', 'picked_up'] }
             });
 
             // Calculate total impact (sum of quantities from completed donations)
@@ -30,14 +30,14 @@ exports.getDashboardStats = async (req, res) => {
                 {
                     $match: {
                         donor: userId,
-                        status: 'COMPLETED'
+                        status: { $in: ['completed', 'picked_up'] }
                     }
                 },
                 {
                     $group: {
                         _id: null,
                         totalQuantity: { $sum: 1 }, // Count of donations
-                        totalMeals: { $sum: { $toDouble: '$quantity' } } // Assuming quantity can be parsed to number
+                        totalMeals: { $sum: { $toDouble: '$quantity.value' } } // Use quantity.value
                     }
                 }
             ]);
@@ -60,7 +60,7 @@ exports.getDashboardStats = async (req, res) => {
                 {
                     $match: {
                         'donationDetails.donor': userId,
-                        'status': { $in: ['PICKED_UP', 'COMPLETED'] },
+                        'status': { $in: ['picked_up', 'completed'] },
                         'rating': { $exists: true, $ne: null }
                     }
                 },
@@ -94,11 +94,11 @@ exports.getDashboardStats = async (req, res) => {
             const totalReservations = await Reservation.countDocuments({ receiver: userId });
             const activeReservations = await Reservation.countDocuments({
                 receiver: userId,
-                status: { $in: ['PENDING', 'ACCEPTED'] }
+                status: { $in: ['confirmed', 'scheduled'] }
             });
             const completedReservations = await Reservation.countDocuments({
                 receiver: userId,
-                status: { $in: ['PICKED_UP', 'COMPLETED'] }
+                status: { $in: ['picked_up', 'completed'] }
             });
 
             // Calculate total food collected
@@ -106,7 +106,7 @@ exports.getDashboardStats = async (req, res) => {
                 {
                     $match: {
                         receiver: userId,
-                        status: { $in: ['PICKED_UP', 'COMPLETED'] }
+                        status: { $in: ['picked_up', 'completed'] }
                     }
                 },
                 {
@@ -177,7 +177,7 @@ exports.getImpactMetrics = async (req, res) => {
             // Donor impact metrics
             const donations = await Donation.find({
                 donor: userId,
-                status: 'COMPLETED'
+                status: { $in: ['completed', 'picked_up'] }
             }).select('quantity createdAt foodType');
 
             const totalDonations = donations.length;
@@ -205,7 +205,7 @@ exports.getImpactMetrics = async (req, res) => {
             // Receiver impact metrics
             const reservations = await Reservation.find({
                 receiver: userId,
-                status: { $in: ['PICKED_UP', 'COMPLETED'] }
+                status: { $in: ['picked_up', 'completed'] }
             }).populate('donation', 'quantity foodType createdAt');
 
             const totalPickups = reservations.length;
