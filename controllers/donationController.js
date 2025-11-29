@@ -109,13 +109,40 @@ exports.getMyDonations = async (req, res) => {
 
     const total = await Donation.countDocuments(query);
 
+    // Fetch reservation data (including ratings) for completed donations
+    const donationIds = donations.map(d => d._id);
+    const reservations = await Reservation.find({
+      donation: { $in: donationIds },
+      status: { $in: ['picked_up', 'completed'] }
+    }).select('donation donorRating donorFeedback');
+
+    // Create a map of donation ID to reservation data
+    const reservationMap = {};
+    reservations.forEach(res => {
+      reservationMap[res.donation.toString()] = {
+        donorRating: res.donorRating,
+        donorFeedback: res.donorFeedback
+      };
+    });
+
+    // Attach reservation data to donations
+    const donationsWithRatings = donations.map(donation => {
+      const donationObj = donation.toObject();
+      const reservationData = reservationMap[donation._id.toString()];
+      if (reservationData) {
+        donationObj.donorRating = reservationData.donorRating;
+        donationObj.donorFeedback = reservationData.donorFeedback;
+      }
+      return donationObj;
+    });
+
     res.json({
       success: true,
-      count: donations.length,
+      count: donationsWithRatings.length,
       total,
       page: parseInt(page),
       pages: Math.ceil(total / limit),
-      donations
+      donations: donationsWithRatings
     });
 
   } catch (error) {
