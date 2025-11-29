@@ -187,8 +187,26 @@ exports.getDashboardStats = async (req, res) => {
                 }
             });
 
-            // Calculate rating
-            const rating = 5.0; // TODO: Implement actual rating calculation
+            // Calculate rating (based on donor ratings)
+            const ratingResult = await Reservation.aggregate([
+                {
+                    $match: {
+                        receiver: userId,
+                        status: { $in: ['picked_up', 'completed'] },
+                        donorRating: { $exists: true, $ne: null }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        averageRating: { $avg: '$donorRating' }
+                    }
+                }
+            ]);
+
+            const rating = ratingResult.length > 0
+                ? parseFloat(ratingResult[0].averageRating.toFixed(1))
+                : 0.0;
 
             stats = {
                 role: 'receiver',

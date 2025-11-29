@@ -427,9 +427,61 @@ exports.getReservationById = async (req, res) => {
 };
 
 /**
+ * @desc    Get reservations (with filters)
+ * @route   GET /api/reservations
+ * @access  Private
+ */
+exports.getReservations = async (req, res) => {
+  try {
+    const { donationId } = req.query;
+    const userId = req.user._id;
+
+    let query = {};
+
+    if (donationId) {
+      query.donation = donationId;
+    }
+
+    // If not admin, ensure user is related to the reservation
+    if (req.user.userType !== 'admin') {
+      // This is a bit complex because we need to check if user is donor or receiver
+      // For simplicity, we'll fetch and filter in memory or use $or if we had direct links
+      // But here we rely on the fact that if they ask for a donationId, they must own that donation
+      if (donationId) {
+        const donation = await Donation.findById(donationId);
+        if (!donation) {
+          return res.status(404).json({ success: false, message: 'Donation not found' });
+        }
+        if (donation.donor.toString() !== userId.toString() && donation.reservedBy?.toString() !== userId.toString()) {
+          return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+      } else {
+        // If no donationId, just return my reservations (same as getMyReservations)
+        return exports.getMyReservations(req, res);
+      }
+    }
+
+    const reservations = await Reservation.find(query)
+      .populate('receiver', 'name organizationName phone city avatar rating')
+      .populate('donor', 'name organizationName phone city avatar') // Populated via virtual or deep populate if needed, but here donor is on donation
+      .populate('donation', 'foodType foodDescription quantity location pickupWindow donor');
+
+    res.json({
+      success: true,
+      count: reservations.length,
+      data: reservations
+    });
+
+  } catch (error) {
+    console.error('Get reservations error:', error);
+    res.status(500).json({ success: false, message: 'Error fetching reservations' });
+  }
+};
+
+/**
  * @desc    Submit rating for a reservation
  * @route   PATCH /api/reservations/:id/rating
- * @access  Private (Receiver only)
+ * @access  Private (Receiver or Donor)
  */
 exports.submitRating = async (req, res) => {
   try {
@@ -455,11 +507,14 @@ exports.submitRating = async (req, res) => {
       });
     }
 
-    // Authorization check - only receiver can rate
-    if (reservation.receiver.toString() !== userId.toString()) {
+    const isReceiver = reservation.receiver.toString() === userId.toString();
+    const isDonor = reservation.donation.donor.toString() === userId.toString();
+
+    // Authorization check
+    if (!isReceiver && !isDonor) {
       return res.status(403).json({
         success: false,
-        message: 'Only the receiver can rate this reservation'
+        message: 'Not authorized to rate this reservation'
       });
     }
 
@@ -471,17 +526,28 @@ exports.submitRating = async (req, res) => {
       });
     }
 
-    // Check if already rated
-    if (reservation.rating) {
-      return res.status(400).json({
-        success: false,
-        message: 'This reservation has already been rated'
-      });
+    if (isReceiver) {
+      // Receiver rating Donor
+      if (reservation.rating) {
+        return res.status(400).json({
+          success: false,
+          message: 'You have already rated this reservation'
+        });
+      }
+      reservation.rating = rating;
+      reservation.feedback = feedback || '';
+    } else if (isDonor) {
+      // Donor rating Receiver
+      if (reservation.donorRating) {
+        return res.status(400).json({
+          success: false,
+          message: 'You have already rated this reservation'
+        });
+      }
+      reservation.donorRating = rating;
+      reservation.donorFeedback = feedback || '';
     }
 
-    // Update reservation with rating
-    reservation.rating = rating;
-    reservation.feedback = feedback || '';
     await reservation.save();
 
     res.json({
@@ -490,7 +556,9 @@ exports.submitRating = async (req, res) => {
       reservation: {
         _id: reservation._id,
         rating: reservation.rating,
-        feedback: reservation.feedback
+        feedback: reservation.feedback,
+        donorRating: reservation.donorRating,
+        donorFeedback: reservation.donorFeedback
       }
     });
 

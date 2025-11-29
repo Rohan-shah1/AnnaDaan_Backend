@@ -47,13 +47,21 @@ const reservationSchema = new mongoose.Schema({
     notes: String
   },
 
-  // Rating and Feedback
+  // Rating and Feedback (Receiver -> Donor)
   rating: {
     type: Number,
     min: 1,
     max: 5
   },
-  feedback: String
+  feedback: String,
+
+  // Rating and Feedback (Donor -> Receiver)
+  donorRating: {
+    type: Number,
+    min: 1,
+    max: 5
+  },
+  donorFeedback: String
 }, {
   timestamps: true
 });
