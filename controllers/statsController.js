@@ -297,6 +297,72 @@ exports.getImpactMetrics = async (req, res) => {
                 trend: thisMonthDonations > 0 ? 'up' : 'stable'
             };
 
+            // Calculate achievements for donors
+            const achievements = [];
+
+            // Get average rating from getDashboardStats logic
+            const User = require('../models/User');
+            const ratingResult = await Reservation.aggregate([
+                {
+                    $lookup: {
+                        from: 'donations',
+                        localField: 'donation',
+                        foreignField: '_id',
+                        as: 'donationDetails'
+                    }
+                },
+                {
+                    $unwind: '$donationDetails'
+                },
+                {
+                    $match: {
+                        'donationDetails.donor': userId,
+                        'status': { $in: ['picked_up', 'completed'] },
+                        'rating': { $exists: true, $ne: null }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        averageRating: { $avg: '$rating' }
+                    }
+                }
+            ]);
+
+            const rating = ratingResult.length > 0 ? parseFloat(ratingResult[0].averageRating.toFixed(1)) : 0;
+
+            // Rating achievement
+            if (rating >= 4.5) {
+                achievements.push({
+                    type: 'rating',
+                    title: 'Highly Rated Donor',
+                    description: `${rating}.0 average rating from receivers`,
+                    icon: 'star'
+                });
+            }
+
+            // Environmental impact achievement
+            if (totalKg >= 100) {
+                achievements.push({
+                    type: 'environmental',
+                    title: 'Environmental Champion',
+                    description: `Saved ${Math.round(totalKg)}kg of food from waste!`,
+                    icon: 'eco'
+                });
+            }
+
+            // Monthly activity achievement
+            if (thisMonthDonations >= 5) {
+                achievements.push({
+                    type: 'monthly',
+                    title: 'Active Donor This Month',
+                    description: `${thisMonthDonations} donations this month`,
+                    icon: 'trophy'
+                });
+            }
+
+            impactMetrics.achievements = achievements;
+
         } else if (userRole === 'receiver') {
             // Receiver impact metrics
             const reservations = await Reservation.find({
@@ -347,6 +413,61 @@ exports.getImpactMetrics = async (req, res) => {
                 thisMonth: thisMonthPickups,
                 trend: thisMonthPickups > 0 ? 'up' : 'stable'
             };
+
+            // Calculate achievements for receivers
+            const achievements = [];
+
+            // Get average rating from getDashboardStats logic
+            const User = require('../models/User');
+            const ratingResult = await Reservation.aggregate([
+                {
+                    $match: {
+                        receiver: userId,
+                        status: { $in: ['picked_up', 'completed'] },
+                        donorRating: { $exists: true, $ne: null }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        averageRating: { $avg: '$donorRating' }
+                    }
+                }
+            ]);
+
+            const rating = ratingResult.length > 0 ? parseFloat(ratingResult[0].averageRating.toFixed(1)) : 0;
+
+            // Rating achievement
+            if (rating >= 4.5) {
+                achievements.push({
+                    type: 'rating',
+                    title: '5.0 Rating',
+                    description: 'Perfect rating from all donors',
+                    icon: 'star'
+                });
+            }
+
+            // Environmental impact achievement
+            if (totalKg >= 100) {
+                achievements.push({
+                    type: 'environmental',
+                    title: 'Impact Leader',
+                    description: `Collected ${Math.round(totalKg)}kg of food`,
+                    icon: 'eco'
+                });
+            }
+
+            // Monthly activity achievement
+            if (thisMonthPickups >= 5) {
+                achievements.push({
+                    type: 'monthly',
+                    title: 'Most Active NGO',
+                    description: `${thisMonthPickups} pickups this month`,
+                    icon: 'trophy'
+                });
+            }
+
+            impactMetrics.achievements = achievements;
         }
 
         res.json({
