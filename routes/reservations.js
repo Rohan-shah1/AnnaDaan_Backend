@@ -1,3 +1,16 @@
+const express = require('express');
+const router = express.Router();
+const { protect, authorize } = require('../middleware/auth');
+const {
+    createReservation,
+    getMyReservations,
+    getReservationById,
+    updateReservationStatus,
+    updatePickupProof,
+    submitRating,
+    getReservations
+} = require('../controllers/reservationController');
+
 router.use(protect);
 
 // Reservation routes
