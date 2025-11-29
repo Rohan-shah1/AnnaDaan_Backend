@@ -334,9 +334,10 @@ exports.getImpactMetrics = async (req, res) => {
             thisMonth.setDate(1);
             thisMonth.setHours(0, 0, 0, 0);
 
-            const thisMonthPickups = reservations.filter(r =>
-                new Date(r.createdAt) >= thisMonth
-            ).length;
+            const thisMonthPickups = reservations.filter(r => {
+                const date = r.actualPickup || r.updatedAt || r.createdAt;
+                return new Date(date) >= thisMonth;
+            }).length;
 
             impactMetrics = {
                 pickupsDone: totalPickups,

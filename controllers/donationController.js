@@ -49,6 +49,7 @@ exports.createDonation = async (req, res) => {
       donor: req.user._id,
       foodType,
       foodDescription: foodDescription.trim(),
+      foodImage: req.body.foodImage,
       quantity,
       location,
       pickupWindow: {
