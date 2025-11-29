@@ -98,6 +98,24 @@ const userSchema = new mongoose.Schema({
     default: false
   },
 
+  // OTP verification fields
+  otp: {
+    type: String,
+    select: false // Don't include in queries by default for security
+  },
+  otpExpiry: {
+    type: Date,
+    select: false
+  },
+  passwordResetOtp: {
+    type: String,
+    select: false
+  },
+  passwordResetOtpExpiry: {
+    type: Date,
+    select: false
+  },
+
   // Document verification fields
   verificationDocument: {
     type: mongoose.Schema.Types.ObjectId,
@@ -136,6 +154,36 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
     return false;
   }
   return await bcrypt.compare(candidatePassword, this.password);
+};
+
+// Generate OTP
+userSchema.methods.generateOTP = function () {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+  this.otp = otp;
+  this.otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+  return otp;
+};
+
+// Generate password reset OTP
+userSchema.methods.generatePasswordResetOTP = function () {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  this.passwordResetOtp = otp;
+  this.passwordResetOtpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  return otp;
+};
+
+// Verify OTP
+userSchema.methods.verifyOTP = function (candidateOtp) {
+  if (!this.otp || !this.otpExpiry) return false;
+  if (new Date() > this.otpExpiry) return false;
+  return this.otp === candidateOtp;
+};
+
+// Verify password reset OTP
+userSchema.methods.verifyPasswordResetOTP = function (candidateOtp) {
+  if (!this.passwordResetOtp || !this.passwordResetOtpExpiry) return false;
+  if (new Date() > this.passwordResetOtpExpiry) return false;
+  return this.passwordResetOtp === candidateOtp;
 };
 
 module.exports = mongoose.model('User', userSchema);
