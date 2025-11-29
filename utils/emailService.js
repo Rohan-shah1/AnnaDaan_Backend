@@ -1,30 +1,20 @@
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 
-// Create transporter (configure with your SMTP settings)
-const transporter = nodemailer.createTransport({
-    service: 'gmail', // or 'smtp.gmail.com'
-    auth: {
-        user: process.env.EMAIL_USER, // Your email
-        pass: process.env.EMAIL_PASSWORD // App-specific password
-    }
-});
+// Initialize SendGrid with API key
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-// Verify transporter configuration
-transporter.verify((error, success) => {
-    if (error) {
-        console.error('Email transporter error:', error);
-    } else {
-        console.log('Email server is ready to send messages');
-    }
-});
+const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'shahalex844@gmail.com';
 
 /**
  * Send verification OTP email
  */
 const sendVerificationOTP = async (email, name, otp) => {
-    const mailOptions = {
-        from: `"AnnaDaan" <${process.env.EMAIL_USER}>`,
+    const msg = {
         to: email,
+        from: {
+            email: fromEmail,
+            name: 'AnnaDaan'
+        },
         subject: 'Verify Your Email - AnnaDaan',
         html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -43,11 +33,14 @@ const sendVerificationOTP = async (email, name, otp) => {
     };
 
     try {
-        const info = await transporter.sendMail(mailOptions);
-        console.log('Verification email sent:', info.messageId);
-        return { success: true, messageId: info.messageId };
+        const response = await sgMail.send(msg);
+        console.log('Verification email sent:', response[0].statusCode);
+        return { success: true, messageId: response[0].headers['x-message-id'] };
     } catch (error) {
         console.error('Error sending verification email:', error);
+        if (error.response) {
+            console.error('SendGrid error body:', error.response.body);
+        }
         throw new Error('Failed to send verification email');
     }
 };
@@ -56,9 +49,12 @@ const sendVerificationOTP = async (email, name, otp) => {
  * Send password reset OTP email
  */
 const sendPasswordResetOTP = async (email, name, otp) => {
-    const mailOptions = {
-        from: `"AnnaDaan" <${process.env.EMAIL_USER}>`,
+    const msg = {
         to: email,
+        from: {
+            email: fromEmail,
+            name: 'AnnaDaan'
+        },
         subject: 'Password Reset OTP - AnnaDaan',
         html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -77,11 +73,14 @@ const sendPasswordResetOTP = async (email, name, otp) => {
     };
 
     try {
-        const info = await transporter.sendMail(mailOptions);
-        console.log('Password reset email sent:', info.messageId);
-        return { success: true, messageId: info.messageId };
+        const response = await sgMail.send(msg);
+        console.log('Password reset email sent:', response[0].statusCode);
+        return { success: true, messageId: response[0].headers['x-message-id'] };
     } catch (error) {
         console.error('Error sending password reset email:', error);
+        if (error.response) {
+            console.error('SendGrid error body:', error.response.body);
+        }
         throw new Error('Failed to send password reset email');
     }
 };
