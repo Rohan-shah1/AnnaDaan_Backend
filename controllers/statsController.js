@@ -322,7 +322,7 @@ exports.getImpactMetrics = async (req, res) => {
 
             impactMetrics = {
                 pickupsDone: totalPickups,
-                mealsServed: Math.round(totalMeals),
+                estimatedMeals: Math.round(totalMeals),
                 peopleHelped: Math.round(totalPeople),
                 foodCollected: `${Math.round(totalKg)}kg`,
                 thisMonth: thisMonthPickups,
