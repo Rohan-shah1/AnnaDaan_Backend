@@ -294,7 +294,8 @@ exports.getImpactMetrics = async (req, res) => {
                 peopleHelped: Math.round(totalPeople),
                 foodSaved: `${Math.round(totalKg)}kg`,
                 thisMonth: thisMonthDonations,
-                trend: thisMonthDonations > 0 ? 'up' : 'stable'
+                trend: thisMonthDonations > 0 ? 'up' : 'stable',
+                rating: 0 // Will be set after calculation
             };
 
             // Calculate achievements for donors
@@ -330,6 +331,9 @@ exports.getImpactMetrics = async (req, res) => {
             ]);
 
             const rating = ratingResult.length > 0 ? parseFloat(ratingResult[0].averageRating.toFixed(1)) : 0;
+
+            // Add rating to impact metrics
+            impactMetrics.rating = rating;
 
             // Rating achievement
             if (rating >= 4.5) {
@@ -411,7 +415,8 @@ exports.getImpactMetrics = async (req, res) => {
                 peopleHelped: Math.round(totalPeople),
                 foodCollected: `${Math.round(totalKg)}kg`,
                 thisMonth: thisMonthPickups,
-                trend: thisMonthPickups > 0 ? 'up' : 'stable'
+                trend: thisMonthPickups > 0 ? 'up' : 'stable',
+                rating: 0 // Will be set after calculation
             };
 
             // Calculate achievements for receivers
@@ -436,6 +441,9 @@ exports.getImpactMetrics = async (req, res) => {
             ]);
 
             const rating = ratingResult.length > 0 ? parseFloat(ratingResult[0].averageRating.toFixed(1)) : 0;
+
+            // Add rating to impact metrics
+            impactMetrics.rating = rating;
 
             // Rating achievement
             if (rating >= 4.5) {
