@@ -1,8 +1,9 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const { verifyGoogleToken } = require('../utils/googleAuth');
-const NotificationService = require('../services/notificationService'); // Import notification service
+const NotificationService = require('../services/notificationService');
 const { sendVerificationOTP, sendPasswordResetOTP } = require('../utils/emailService');
+
 // Register user
 const register = async (req, res) => {
   try {
@@ -28,29 +29,29 @@ const register = async (req, res) => {
       email,
       password,
       profileCompleted: false,
-      authMethod: 'email'
+      authMethod: 'email',
+      emailVerified: false // Email not verified initially
     });
 
-    const token = generateToken(user._id);
+    // Generate OTP
+    const otp = user.generateOTP();
+    await user.save();
 
-    // Send welcome notification to new user
-    await NotificationService.sendWelcomeNotification(user._id, user.name);
+    // Send verification email
+    try {
+      await sendVerificationOTP(email, name, otp);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Don't fail registration if email fails, but log it
+    }
 
+    // Don't send token yet - user must verify email first
     res.status(201).json({
       success: true,
-      message: 'Registration successful. Please complete your profile.',
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        profileCompleted: user.profileCompleted,
-        userType: user.userType,
-        authMethod: user.authMethod,
-        profilePicture: user.profilePicture,
-        verificationDocument: user.verificationDocument,
-        verificationStatus: user.verificationStatus
-      }
+      message: 'Registration successful. Please check your email for verification OTP.',
+      requiresVerification: true,
+      email: user.email,
+      userId: user._id
     });
   } catch (error) {
     res.status(400).json({
@@ -259,6 +260,16 @@ const login = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
+      });
+    }
+
+    // Check if email is verified
+    if (!user.emailVerified) {
+      return res.status(401).json({
+        success: false,
+        message: 'Please verify your email to login',
+        requiresVerification: true,
+        email: user.email
       });
     }
 
