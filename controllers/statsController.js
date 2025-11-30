@@ -95,11 +95,15 @@ exports.getDashboardStats = async (req, res) => {
                     if (unit === 'portions') {
                         totalMeals += value;
                         totalPeople += value;
-                        totalKg += value * 0.75; // 20 portions = 15kg, so 1 portion = 0.75kg
+                        totalKg += value / 1.33;
                     } else if (unit === 'crates' || unit === 'boxes') {
-                        totalMeals += value * 26;
-                        totalPeople += value * 26;
+                        totalMeals += value * 20 * 1.33;
+                        totalPeople += value * 20 * 1.33;
                         totalKg += value * 20;
+                    } else if (unit === 'kg') {
+                        totalMeals += value * 1.33;
+                        totalPeople += value * 1.33;
+                        totalKg += value;
                     }
                 }
             });
@@ -178,11 +182,15 @@ exports.getDashboardStats = async (req, res) => {
                     if (unit === 'portions') {
                         totalMeals += value;
                         totalPeople += value;
-                        totalKg += value * 0.75;
+                        totalKg += value / 1.33;
                     } else if (unit === 'crates' || unit === 'boxes') {
-                        totalMeals += value * 26;
-                        totalPeople += value * 26;
+                        totalMeals += value * 20 * 1.33;
+                        totalPeople += value * 20 * 1.33;
                         totalKg += value * 20;
+                    } else if (unit === 'kg') {
+                        totalMeals += value * 1.33;
+                        totalPeople += value * 1.33;
+                        totalKg += value;
                     }
                 }
             });
@@ -272,11 +280,15 @@ exports.getImpactMetrics = async (req, res) => {
                     if (unit === 'portions') {
                         totalMeals += value;
                         totalPeople += value;
-                        totalKg += value * 0.75;
+                        totalKg += value / 1.33;
                     } else if (unit === 'crates' || unit === 'boxes') {
-                        totalMeals += value * 26;
-                        totalPeople += value * 26;
+                        totalMeals += value * 20 * 1.33;
+                        totalPeople += value * 20 * 1.33;
                         totalKg += value * 20;
+                    } else if (unit === 'kg') {
+                        totalMeals += value * 1.33;
+                        totalPeople += value * 1.33;
+                        totalKg += value;
                     }
                 }
             });
@@ -390,11 +402,15 @@ exports.getImpactMetrics = async (req, res) => {
                     if (unit === 'portions') {
                         totalMeals += value;
                         totalPeople += value;
-                        totalKg += value * 0.75;
+                        totalKg += value / 1.33;
                     } else if (unit === 'crates' || unit === 'boxes') {
-                        totalMeals += value * 26;
-                        totalPeople += value * 26;
+                        totalMeals += value * 20 * 1.33;
+                        totalPeople += value * 20 * 1.33;
                         totalKg += value * 20;
+                    } else if (unit === 'kg') {
+                        totalMeals += value * 1.33;
+                        totalPeople += value * 1.33;
+                        totalKg += value;
                     }
                 }
             });
