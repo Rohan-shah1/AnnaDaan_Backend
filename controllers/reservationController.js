@@ -2,7 +2,7 @@ const Reservation = require('../models/Reservation');
 const Donation = require('../models/Donation');
 const User = require('../models/User');
 const { calculateDistance, calculateTravelTime } = require('../utils/geolocation');
-const NotificationService = require('../services/notificationService'); // Import notification service
+const NotificationService = require('../services/notificationService');
 
 /**
  * @desc    Create a reservation
@@ -63,7 +63,7 @@ exports.createReservation = async (req, res) => {
     // Calculate distance and travel time
     const receiver = await User.findById(receiverId);
     const receiverLocation = {
-      lat: 27.7172, // Default - update with user's actual location
+      lat: 27.7172,
       lng: 85.3240
     };
 
@@ -153,7 +153,6 @@ exports.getMyReservations = async (req, res) => {
         }
       ];
     } else if (userType === 'donor') {
-      // Get reservations for donor's donations
       const donorDonations = await Donation.find({ donor: userId }).select('_id');
       const donationIds = donorDonations.map(donation => donation._id);
 
@@ -211,6 +210,8 @@ exports.updateReservationStatus = async (req, res) => {
     const userId = req.user._id;
     const userType = req.user.userType;
 
+    console.log(`Updating reservation ${id} to status: ${status}`);
+
     // Validate status
     const validStatuses = ['confirmed', 'scheduled', 'picked_up', 'cancelled', 'no_show'];
     if (!validStatuses.includes(status)) {
@@ -226,6 +227,7 @@ exports.updateReservationStatus = async (req, res) => {
       .populate('receiver');
 
     if (!reservation) {
+      console.error(`Reservation not found: ${id}`);
       return res.status(404).json({
         success: false,
         message: 'Reservation not found'
@@ -237,6 +239,7 @@ exports.updateReservationStatus = async (req, res) => {
     const isReceiver = reservation.receiver._id.toString() === userId.toString();
 
     if (!isDonor && !isReceiver) {
+      console.error(`User ${userId} not authorized for reservation ${id}`);
       return res.status(403).json({
         success: false,
         message: 'Not authorized to update this reservation'
@@ -294,10 +297,11 @@ exports.updateReservationStatus = async (req, res) => {
 
     await reservation.save();
 
+    console.log(`Successfully updated reservation ${id} to ${status}`);
+
     // Populate before response
     await reservation.populate('donation', 'foodType foodDescription quantity location pickupWindow');
     await reservation.populate('receiver', 'name organizationName phone city');
-    await reservation.populate('donor', 'name organizationName phone city');
 
     res.json({
       success: true,
@@ -307,9 +311,12 @@ exports.updateReservationStatus = async (req, res) => {
 
   } catch (error) {
     console.error('Update reservation status error:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'Error updating reservation status'
+      message: 'Error updating reservation status',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -362,7 +369,6 @@ exports.updatePickupProof = async (req, res) => {
     // Populate before response
     await reservation.populate('donation', 'foodType foodDescription quantity');
     await reservation.populate('receiver', 'name organizationName');
-    await reservation.populate('donor', 'name organizationName');
 
     res.json({
       success: true,
@@ -391,8 +397,7 @@ exports.getReservationById = async (req, res) => {
 
     const reservation = await Reservation.findById(id)
       .populate('donation', 'foodType foodDescription quantity location pickupWindow donor')
-      .populate('receiver', 'name organizationName phone city rating totalPickups')
-      .populate('donor', 'name organizationName phone city');
+      .populate('receiver', 'name organizationName phone city rating totalPickups');
 
     if (!reservation) {
       return res.status(404).json({
@@ -444,204 +449,6 @@ exports.getReservations = async (req, res) => {
 
     // If not admin, ensure user is related to the reservation
     if (req.user.userType !== 'admin') {
-      // This is a bit complex because we need to check if user is donor or receiver
-      // For simplicity, we'll fetch and filter in memory or use $or if we had direct links
-      // But here we rely on the fact that if they ask for a donationId, they must own that donation
-      // Update donation status back to pending
-      reservation.donation.status = 'pending';
-      reservation.donation.reservedBy = undefined;
-      reservation.donation.reservedAt = undefined;
-      await reservation.donation.save();
-    }
-
-    if (status === 'picked_up') {
-      if (!isReceiver) {
-        return res.status(403).json({
-          success: false,
-          message: 'Only receiver can mark reservation as picked up'
-        });
-      }
-
-      // Update donation status
-      reservation.donation.status = 'picked_up';
-      reservation.donation.pickedUpAt = new Date();
-      await reservation.donation.save();
-
-      // Update receiver's pickup count
-      await User.findByIdAndUpdate(userId, {
-        $inc: { totalPickups: 1 }
-      });
-
-      // Send notification to donor that donation was picked up
-      await NotificationService.notifyDonationPickedUp(
-        reservation.donation._id,
-        reservation.donation.donor.toString(),
-        reservation.receiver.organizationName
-      );
-    }
-
-    // Update reservation
-    reservation.status = status;
-
-    if (status === 'picked_up') {
-      reservation.actualPickup = new Date();
-    }
-
-    await reservation.save();
-
-    // Populate before response
-    await reservation.populate('donation', 'foodType foodDescription quantity location pickupWindow');
-    await reservation.populate('receiver', 'name organizationName phone city');
-    await reservation.populate('donor', 'name organizationName phone city');
-
-    res.json({
-      success: true,
-      message: `Reservation ${status} successfully`,
-      reservation
-    });
-
-  } catch (error) {
-    console.error('Update reservation status error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating reservation status'
-    });
-  }
-};
-
-/**
- * @desc    Update proof of pickup
- * @route   PATCH /api/reservations/:id/pickup-proof
- * @access  Private (Receiver only)
- */
-exports.updatePickupProof = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { photos, temperatureAtPickup, notes } = req.body;
-    const userId = req.user._id;
-
-    const reservation = await Reservation.findById(id);
-
-    if (!reservation) {
-      return res.status(404).json({
-        success: false,
-        message: 'Reservation not found'
-      });
-    }
-
-    // Authorization check
-    if (reservation.receiver.toString() !== userId.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to update pickup proof for this reservation'
-      });
-    }
-
-    if (reservation.status !== 'picked_up') {
-      return res.status(400).json({
-        success: false,
-        message: 'Can only add pickup proof for completed pickups'
-      });
-    }
-
-    // Update pickup proof
-    reservation.proofOfPickup = {
-      photos: photos || [],
-      temperatureAtPickup: temperatureAtPickup || null,
-      notes: notes || '',
-      completedAt: new Date()
-    };
-
-    await reservation.save();
-
-    // Populate before response
-    await reservation.populate('donation', 'foodType foodDescription quantity');
-    await reservation.populate('receiver', 'name organizationName');
-    await reservation.populate('donor', 'name organizationName');
-
-    res.json({
-      success: true,
-      message: 'Pickup proof updated successfully',
-      reservation
-    });
-
-  } catch (error) {
-    console.error('Update pickup proof error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating pickup proof'
-    });
-  }
-};
-
-/**
- * @desc    Get reservation by ID
- * @route   GET /api/reservations/:id
- * @access  Private
- */
-exports.getReservationById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user._id;
-
-    const reservation = await Reservation.findById(id)
-      .populate('donation', 'foodType foodDescription quantity location pickupWindow donor')
-      .populate('receiver', 'name organizationName phone city rating totalPickups')
-      .populate('donor', 'name organizationName phone city');
-
-    if (!reservation) {
-      return res.status(404).json({
-        success: false,
-        message: 'Reservation not found'
-      });
-    }
-
-    // Authorization check
-    const isDonor = reservation.donation.donor.toString() === userId.toString();
-    const isReceiver = reservation.receiver._id.toString() === userId.toString();
-
-    if (!isDonor && !isReceiver) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to view this reservation'
-      });
-    }
-
-    res.json({
-      success: true,
-      reservation
-    });
-
-  } catch (error) {
-    console.error('Get reservation by ID error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching reservation'
-    });
-  }
-};
-
-/**
- * @desc    Get reservations (with filters)
- * @route   GET /api/reservations
- * @access  Private
- */
-exports.getReservations = async (req, res) => {
-  try {
-    const { donationId } = req.query;
-    const userId = req.user._id;
-
-    let query = {};
-
-    if (donationId) {
-      query.donation = donationId;
-    }
-
-    // If not admin, ensure user is related to the reservation
-    if (req.user.userType !== 'admin') {
-      // This is a bit complex because we need to check if user is donor or receiver
-      // For simplicity, we'll fetch and filter in memory or use $or if we had direct links
-      // But here we rely on the fact that if they ask for a donationId, they must own that donation
       if (donationId) {
         const donation = await Donation.findById(donationId);
         if (!donation) {
@@ -651,7 +458,7 @@ exports.getReservations = async (req, res) => {
           return res.status(403).json({ success: false, message: 'Not authorized' });
         }
       } else {
-        // If no donationId, just return my reservations (same as getMyReservations)
+        // If no donationId, just return my reservations
         return exports.getMyReservations(req, res);
       }
     }
