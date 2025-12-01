@@ -7,6 +7,7 @@ require('dotenv').config();
 
 // Import the external database connection
 const connectDB = require('./config/database');
+require('./models/GridFSFile'); // Register GridFS model for population
 
 const app = express();
 
