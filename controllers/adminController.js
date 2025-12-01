@@ -87,7 +87,7 @@ const verifyUser = async (req, res) => {
 const getAllUsers = async (req, res) => {
     try {
         const { page = 1, limit = 10, search, type } = req.query;
-        const query = {};
+        const query = { userType: { $ne: 'admin' } }; // Exclude admin users
 
         if (search) {
             query.$or = [
