@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema({
   // Profile completion fields (Step 2)
   userType: {
     type: String,
-    enum: ['donor', 'receiver', null],
+    enum: ['donor', 'receiver', 'admin', null],
     default: null
   },
   profileCompleted: {
